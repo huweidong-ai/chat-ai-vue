@@ -1,4 +1,4 @@
-# ai-chat-front-end
+# chat-ai-vue
 
 ## Project setup
 ```
