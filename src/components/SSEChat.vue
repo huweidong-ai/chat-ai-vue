@@ -81,7 +81,7 @@ export default {
       console.log('Attempting to stop the stream...'); // 添加这一行来确认是否进入方法
       if (sseId.value) {
         // 调用 stop 接口
-        fetch(`${getApiUrl()}/sse/stream/stop/${sseId.value}`, {
+        fetch(`${API_CONFIG.domain}/sse/stream/stop/${sseId.value}`, {
           method: 'GET'
         })
             .then(response => response.json())
@@ -108,8 +108,8 @@ export default {
     };
 
     const startEventSource = (data) => {
-      // 使用 API_CONFIG 中的配置构建完整的 URL
-      const url = `${getApiUrl()}/sse/stream/chat`;
+      console.log('Starting event source...');
+      const url = `${API_CONFIG.domain}/sse/stream/chat`;
       fetchEventSource(url, {
         method: 'POST',
         headers: {
@@ -119,6 +119,7 @@ export default {
         body: JSON.stringify(data),
         signal: controller.signal,
         onopen(response) {
+          console.log('Opening event source...');
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
             console.log("Connection made");
             isStreaming.value = true; // 开始接收流数据
@@ -127,6 +128,7 @@ export default {
           }
         },
         onmessage(event) {
+          console.log('Received message:', event)
           try {
             // 解析服务器返回的 JSON 数据
             const eventData = JSON.parse(event.data);
@@ -206,10 +208,6 @@ export default {
     const renderMarkdown = (content) => {
       // 使用 marked 解析 Markdown 并返回 HTML 字符串
       return markedParse(content || '', markedOptions);
-    };
-
-    const getApiUrl = () => {
-      return `${API_CONFIG.domain}`;
     };
 
     onMounted(() => {

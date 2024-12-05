@@ -1,5 +1,5 @@
 const API_CONFIG = {
-    domain: process.env.VUE_APP_API_DOMAIN,
+    domain: process.env.VUE_APP_API_URL,
     environment: process.env.VUE_APP_ENVIRONMENT,
 };
 
