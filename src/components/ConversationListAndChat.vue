@@ -31,8 +31,8 @@
             ref="messageInput"
         ></textarea>
 
-        <button @click="sendMessageOrStop" :class="['btn', isStreaming ? 'send-button-red' : 'send-button']">
-          {{ isStreaming ? '停止' : '发送' }}
+        <button @click="sendMessageOrStop" :class="['btn', isCurrentDialogStreaming ? 'send-button-red' : 'send-button']">
+          {{ isCurrentDialogStreaming ? '停止' : '发送' }}
         </button>
       </footer>
     </div>
@@ -43,7 +43,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import {ref, onMounted, onUnmounted, nextTick, watch, computed} from 'vue';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import API_CONFIG from '@/config/api'; // 导入 API 配置
 import { parse as markedParse } from 'marked'; // 导入 marked 解析函数
@@ -62,11 +62,10 @@ export default {
     const selectedDialogId = ref(null);
     const message = ref('');
     let controller = new AbortController();
-    let isConversationFinished = ref(false);
     let currentIncomingMessage = ref(null); // 用于存储当前正在接收的消息
     const messageInput = ref(null);
     let sseId = ref(null); // 存储 SSE ID
-    const isStreaming = ref(false); // 用于跟踪是否正在接收流数据
+    const isStreamingMap = ref({}); // 用于跟踪每个对话的流式输出状态
 
     const loadDialogs = () => {
       dialogs.value = DialogService.getAllDialogs();
@@ -128,7 +127,7 @@ export default {
     };
 
     const sendMessageOrStop = () => {
-      if (isStreaming.value) {
+      if (isCurrentDialogStreaming.value) {
         stopStream();
       } else {
         sendMessage();
@@ -136,7 +135,7 @@ export default {
     };
 
     const startEventSource = (data) => {
-      if (isStreaming.value) {
+      if (isCurrentDialogStreaming.value) {
         console.warn('Already streaming, ignoring duplicate request.');
         return;
       }
@@ -152,11 +151,10 @@ export default {
         },
         body: JSON.stringify(data),
         signal: controller.signal,
-        openWhenHidden: true,
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
             console.log("Connection made");
-            isStreaming.value = true; // 开始接收流数据
+            setDialogIsStreaming(selectedDialogId.value, true); // 开始接收流数据
           } else {
             throw new Error(`Unexpected response status ${response.status}`);
           }
@@ -183,14 +181,13 @@ export default {
 
               // 检查是否已经完成对话
               if (eventData.finish) {
-                isConversationFinished.value = true;
-                isStreaming.value = false; // 停止接收流数据
+                setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
                 currentIncomingMessage.value = null; // 清空当前消息缓冲区
               }
             } else {
               // 如果服务器返回了错误码，处理错误
               selectedDialog.value.messages.push({ content: `Error: ${eventData.msg}`, type: 'system' });
-              isStreaming.value = false; // 停止接收流数据
+              setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
               currentIncomingMessage.value = null;
             }
           } catch (e) {
@@ -199,22 +196,22 @@ export default {
               content: '无法解析服务器返回的数据：' + e.message,
               type: 'system'
             });
-            isStreaming.value = false; // 停止接收流数据
+            setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
             currentIncomingMessage.value = null;
           }
         },
         onclose() {
           console.log('Connection closed');
-          if (!isConversationFinished.value) {
+          if (!isCurrentDialogStreaming.value) {
             selectedDialog.value.messages.push({ content: '连接已关闭。', type: 'system' });
           }
-          isStreaming.value = false; // 停止接收流数据
+          setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
           currentIncomingMessage.value = null; // 清空当前消息缓冲区
         },
         onerror(error) {
           console.error('Error with the event source:', error);
           selectedDialog.value.messages.push({ content: '与服务器的连接发生错误。', type: 'system' });
-          isStreaming.value = false; // 停止接收流数据
+          setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
           currentIncomingMessage.value = null; // 清空当前消息缓冲区
         }
       });
@@ -225,7 +222,7 @@ export default {
       if (selectedDialog.value) {
         selectedDialog.value.messages.push({ content: '连接已手动关闭。', type: 'system' });
       }
-      isStreaming.value = false; // 停止接收流数据
+      setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
       currentIncomingMessage.value = null; // 清空当前消息缓冲区
       sseId.value = null; // 清空 sseId
     };
@@ -249,6 +246,18 @@ export default {
     };
 
     const selectedDialog = ref(null);
+
+    const setDialogIsStreaming = (dialogId, isStreaming) => {
+      isStreamingMap.value[dialogId] = isStreaming;
+    };
+
+    const getDialogIsStreaming = (dialogId) => {
+      return isStreamingMap.value[dialogId] || false;
+    };
+
+    const isCurrentDialogStreaming = computed(() => {
+      return getDialogIsStreaming(selectedDialogId.value);
+    });
 
     watch(selectedDialogId, (newId) => {
       selectedDialog.value = DialogService.getDialogById(newId);
@@ -285,7 +294,7 @@ export default {
       messageInput,
       stopStream,
       sendMessageOrStop,
-      isStreaming,
+      isCurrentDialogStreaming,
       navigateToNewChat,
       selectDialog,
       formatDate
