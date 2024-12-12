@@ -1,17 +1,14 @@
+<!-- src/App.vue -->
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" style="width: 600px; height: 300px;">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+    <router-view></router-view>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/SSEChat.vue'
-
 export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-}
+  name: 'App'
+};
 </script>
 
 <style>
@@ -24,3 +21,6 @@ export default {
   margin-top: 60px;
 }
 </style>
+
+
+

@@ -30,13 +30,20 @@ my-vue-project/
 ├── src/
 │   ├── assets/
 │   ├── components/
+│   │   └── ConversationListAndChat.vue
+│   │   └── NewChat.vue
 │   │   └── SSEChat.vue
 │   ├── config/
 │   │   └── api.js
+│   ├── router/
+│   │   └── index.js
+│   ├── services/
+│   │   └── DialogService.js
 │   ├── App.vue
 │   └── main.js
 ├── .env.development
-├── .env.development
+├── .env.production
 ├── .env.testing
-└── package.json
+├── package.json
+└── vue.config.js
 ```
