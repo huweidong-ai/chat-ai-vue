@@ -43,7 +43,7 @@
 </template>
 
 <script>
-import {ref, onMounted, onUnmounted, nextTick, watch, computed} from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import API_CONFIG from '@/config/api'; // 导入 API 配置
 import { parse as markedParse } from 'marked'; // 导入 marked 解析函数
@@ -61,11 +61,7 @@ export default {
     const dialogs = ref([]);
     const selectedDialogId = ref(null);
     const message = ref('');
-    let controller = new AbortController();
-    let currentIncomingMessage = ref(null); // 用于存储当前正在接收的消息
     const messageInput = ref(null);
-    let sseId = ref(null); // 存储 SSE ID
-    const isStreamingMap = ref({}); // 用于跟踪每个对话的流式输出状态
 
     const loadDialogs = () => {
       dialogs.value = DialogService.getAllDialogs();
@@ -106,16 +102,17 @@ export default {
 
     const stopStream = () => {
       console.log('Attempting to stop the stream...');
-      if (sseId.value) {
+      const currentSSEId = getDialogSseId(selectedDialogId.value);
+      if (currentSSEId) {
         // 调用 stop 接口
-        fetch(`${getApiUrl()}/sse/stream/stop/${sseId.value}`, {
+        fetch(`${getApiUrl()}/sse/stream/stop/${currentSSEId}`, {
           method: 'GET'
         })
             .then(response => response.json())
             .then(data => {
               console.log('Stop response:', data);
               selectedDialog.value.messages.push({ content: '流已停止。', type: 'system' });
-              closeConnection();
+              closeConnection(selectedDialogId.value);
             })
             .catch(error => {
               console.error('Error stopping stream:', error);
@@ -134,15 +131,23 @@ export default {
       }
     };
 
+    const controllersMap = ref({});
+    const incomingMessagesMap = ref({});
+    const sseIdsMap = ref({});
+    const isStreamingMap = ref({});
+
     const startEventSource = (data) => {
-      if (isCurrentDialogStreaming.value) {
+      const dialogId = selectedDialogId.value;
+      if (getDialogIsStreaming(dialogId)) {
         console.warn('Already streaming, ignoring duplicate request.');
         return;
       }
 
       // 使用 API_CONFIG 中的配置构建完整的 URL
       const url = `${getApiUrl()}/sse/stream/chat`;
-      controller = new AbortController(); // 创建一个新的 AbortController 实例
+      const controller = new AbortController(); // 创建一个新的 AbortController 实例
+      controllersMap.value[dialogId] = controller;
+
       fetchEventSource(url, {
         method: 'POST',
         headers: {
@@ -154,7 +159,7 @@ export default {
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
             console.log("Connection made");
-            setDialogIsStreaming(selectedDialogId.value, true); // 开始接收流数据
+            setDialogIsStreaming(dialogId, true); // 开始接收流数据
           } else {
             throw new Error(`Unexpected response status ${response.status}`);
           }
@@ -167,28 +172,30 @@ export default {
             if (eventData.code === 200) {
               // 更新 sseId 如果存在
               if (eventData.sseId) {
-                sseId.value = eventData.sseId;
+                setDialogSseId(dialogId, eventData.sseId);
               }
 
               // 如果 currentIncomingMessage 还未初始化，则初始化它
-              if (!currentIncomingMessage.value) {
-                currentIncomingMessage.value = { content: '', type: 'incoming' };
-                selectedDialog.value.messages.push(currentIncomingMessage.value);
+              let currentIncomingMessage = getDialogIncomingMessage(dialogId);
+              if (!currentIncomingMessage) {
+                currentIncomingMessage = { content: '', type: 'incoming' };
+                selectedDialog.value.messages.push(currentIncomingMessage);
+                setDialogIncomingMessage(dialogId, currentIncomingMessage);
               }
 
               // 追加接收到的部分消息
-              currentIncomingMessage.value.content += eventData.answer;
+              currentIncomingMessage.content += eventData.answer;
 
               // 检查是否已经完成对话
               if (eventData.finish) {
-                setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
-                currentIncomingMessage.value = null; // 清空当前消息缓冲区
+                setDialogIsStreaming(dialogId, false); // 停止接收流数据
+                setDialogIncomingMessage(dialogId, null); // 清空当前消息缓冲区
               }
             } else {
               // 如果服务器返回了错误码，处理错误
               selectedDialog.value.messages.push({ content: `Error: ${eventData.msg}`, type: 'system' });
-              setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
-              currentIncomingMessage.value = null;
+              setDialogIsStreaming(dialogId, false); // 停止接收流数据
+              setDialogIncomingMessage(dialogId, null);
             }
           } catch (e) {
             console.error('Failed to parse event data:', e);
@@ -196,35 +203,38 @@ export default {
               content: '无法解析服务器返回的数据：' + e.message,
               type: 'system'
             });
-            setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
-            currentIncomingMessage.value = null;
+            setDialogIsStreaming(dialogId, false); // 停止接收流数据
+            setDialogIncomingMessage(dialogId, null);
           }
         },
         onclose() {
           console.log('Connection closed');
-          if (!isCurrentDialogStreaming.value) {
+          if (!getDialogIsStreaming(dialogId)) {
             selectedDialog.value.messages.push({ content: '连接已关闭。', type: 'system' });
           }
-          setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
-          currentIncomingMessage.value = null; // 清空当前消息缓冲区
+          setDialogIsStreaming(dialogId, false); // 停止接收流数据
+          setDialogIncomingMessage(dialogId, null); // 清空当前消息缓冲区
         },
         onerror(error) {
           console.error('Error with the event source:', error);
           selectedDialog.value.messages.push({ content: '与服务器的连接发生错误。', type: 'system' });
-          setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
-          currentIncomingMessage.value = null; // 清空当前消息缓冲区
+          setDialogIsStreaming(dialogId, false); // 停止接收流数据
+          setDialogIncomingMessage(dialogId, null); // 清空当前消息缓冲区
         }
       });
     };
 
-    const closeConnection = () => {
-      controller.abort();
+    const closeConnection = (dialogId) => {
+      const controller = controllersMap.value[dialogId];
+      if (controller) {
+        controller.abort();
+      }
       if (selectedDialog.value) {
         selectedDialog.value.messages.push({ content: '连接已手动关闭。', type: 'system' });
       }
-      setDialogIsStreaming(selectedDialogId.value, false); // 停止接收流数据
-      currentIncomingMessage.value = null; // 清空当前消息缓冲区
-      sseId.value = null; // 清空 sseId
+      setDialogIsStreaming(dialogId, false); // 停止接收流数据
+      setDialogIncomingMessage(dialogId, null); // 清空当前消息缓冲区
+      setDialogSseId(dialogId, null); // 清空 sseId
     };
 
     const scrollToBottom = () => {
@@ -255,6 +265,22 @@ export default {
       return isStreamingMap.value[dialogId] || false;
     };
 
+    const setDialogSseId = (dialogId, sseId) => {
+      sseIdsMap.value[dialogId] = sseId;
+    };
+
+    const getDialogSseId = (dialogId) => {
+      return sseIdsMap.value[dialogId] || null;
+    };
+
+    const setDialogIncomingMessage = (dialogId, message) => {
+      incomingMessagesMap.value[dialogId] = message;
+    };
+
+    const getDialogIncomingMessage = (dialogId) => {
+      return incomingMessagesMap.value[dialogId] || null;
+    };
+
     const isCurrentDialogStreaming = computed(() => {
       return getDialogIsStreaming(selectedDialogId.value);
     });
@@ -272,8 +298,10 @@ export default {
     });
 
     onUnmounted(() => {
-      // 确保在组件卸载时关闭连接
-      closeConnection();
+      // 确保在组件卸载时关闭所有连接
+      Object.keys(controllersMap.value).forEach((dialogId) => {
+        closeConnection(dialogId);
+      });
     });
 
     // 在 message 变化时调用 autoGrow
