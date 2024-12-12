@@ -5,7 +5,7 @@ const getAllDialogs = () => {
     return dialogs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-const addDialog = (title, initialMessages = []) => {
+const createDialog = (title, initialMessages = []) => {
     const newDialog = {
         id: dialogs.length + 1,
         title,
@@ -13,6 +13,7 @@ const addDialog = (title, initialMessages = []) => {
         messages: initialMessages
     };
     dialogs.push(newDialog);
+    return newDialog;
 };
 
 const getDialogById = (id) => {
@@ -21,7 +22,7 @@ const getDialogById = (id) => {
 
 export default {
     getAllDialogs,
-    addDialog,
+    createDialog,
     getDialogById
 };
 

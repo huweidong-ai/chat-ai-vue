@@ -48,7 +48,6 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import API_CONFIG from '@/config/api'; // 导入 API 配置
 import { parse as markedParse } from 'marked'; // 导入 marked 解析函数
 import DialogService from '@/services/DialogService';
-import { useRouter } from 'vue-router';
 
 // 定义 Markdown 解析选项
 const markedOptions = {
@@ -59,7 +58,6 @@ const markedOptions = {
 export default {
   name: 'ConversationListAndChat',
   setup() {
-    const router = useRouter();
     const dialogs = ref([]);
     const selectedDialogId = ref(null);
     const message = ref('');
@@ -75,7 +73,11 @@ export default {
     };
 
     const navigateToNewChat = () => {
-      router.push({ name: 'NewChat' });
+      // 创建一个新的对话并添加到对话列表中
+      const newDialog = DialogService.createDialog();
+      dialogs.value.push(newDialog);
+      // 选择新创建的对话
+      selectedDialogId.value = newDialog.id;
     };
 
     const selectDialog = (id) => {
