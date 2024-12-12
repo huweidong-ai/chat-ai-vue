@@ -49,12 +49,18 @@ export default {
   setup() {
     const message = ref('');
     const messages = ref([]);
-    let controller = new AbortController();
     let isConversationFinished = ref(false);
     let currentIncomingMessage = ref(null); // 用于存储当前正在接收的消息
     const messageInput = ref(null);
     let sseId = ref(null); // 存储 SSE ID
     const isStreaming = ref(false); // 用于跟踪是否正在接收流数据
+
+    const KILLSWITCH_TIMEOUT_IN_SECONDS = 10;
+    const abortController = new AbortController();
+
+    const firstGenerationTimeoutId = setTimeout(() => {
+      abortController.abort();
+    }, KILLSWITCH_TIMEOUT_IN_SECONDS * 1000); // Convert seconds to milliseconds for setTimeout()
 
     const autoGrow = () => {
       nextTick(() => {
@@ -64,6 +70,14 @@ export default {
           messageInput.value.style.height = messageInput.value.scrollHeight + 'px';
         }
       });
+    };
+
+    const sendMessageOrStop = () => {
+      if (isStreaming.value) {
+        stopStream();
+      } else {
+        sendMessage();
+      }
     };
 
     const sendMessage = () => {
@@ -77,36 +91,6 @@ export default {
       }
     };
 
-    const stopStream = () => {
-      console.log('Attempting to stop the stream...'); // 添加这一行来确认是否进入方法
-      if (sseId.value) {
-        // 调用 stop 接口
-        fetch(`${API_CONFIG.domain}/sse/stream/stop/${sseId.value}`, {
-          method: 'GET'
-        })
-            .then(response => response.json())
-            .then(data => {
-              console.log('Stop response:', data);
-              messages.value.push({ content: '流已停止。', type: 'system' });
-              closeConnection();
-            })
-            .catch(error => {
-              console.error('Error stopping stream:', error);
-              messages.value.push({ content: '无法停止流。', type: 'system' });
-            });
-      } else {
-        messages.value.push({ content: '没有有效的 SSE ID 可以停止流。', type: 'system' });
-      }
-    };
-
-    const sendMessageOrStop = () => {
-      if (isStreaming.value) {
-        stopStream();
-      } else {
-        sendMessage();
-      }
-    };
-
     const startEventSource = (data) => {
       console.log('Starting event source...');
       const url = `${API_CONFIG.domain}/sse/stream/chat`;
@@ -117,7 +101,8 @@ export default {
           'Accept': 'text/event-stream'
         },
         body: JSON.stringify(data),
-        signal: controller.signal,
+        signal: abortController.signal,
+        openWhenHidden: true,
         onopen(response) {
           console.log('Opening event source...');
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
@@ -129,6 +114,7 @@ export default {
         },
         onmessage(event) {
           console.log('Received message:', event)
+          clearTimeout(firstGenerationTimeoutId);
           try {
             // 解析服务器返回的 JSON 数据
             const eventData = JSON.parse(event.data);
@@ -188,8 +174,30 @@ export default {
       });
     };
 
+    const stopStream = () => {
+      console.log('Attempting to stop the stream...'); // 添加这一行来确认是否进入方法
+      if (sseId.value) {
+        // 调用 stop 接口
+        fetch(`${API_CONFIG.domain}/sse/stream/stop/${sseId.value}`, {
+          method: 'GET'
+        })
+            .then(response => response.json())
+            .then(data => {
+              console.log('Stop response:', data);
+              messages.value.push({ content: '流已停止。', type: 'system' });
+              closeConnection();
+            })
+            .catch(error => {
+              console.error('Error stopping stream:', error);
+              messages.value.push({ content: '无法停止流。', type: 'system' });
+            });
+      } else {
+        messages.value.push({ content: '没有有效的 SSE ID 可以停止流。', type: 'system' });
+      }
+    };
+
     const closeConnection = () => {
-      controller.abort();
+      abortController.abort();
       messages.value.push({ content: '连接已手动关闭。', type: 'system' });
       isStreaming.value = false; // 停止接收流数据
       currentIncomingMessage.value = null;
