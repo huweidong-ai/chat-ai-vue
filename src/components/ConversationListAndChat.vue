@@ -152,6 +152,7 @@ export default {
         },
         body: JSON.stringify(data),
         signal: controller.signal,
+        openWhenHidden: true,
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
             console.log("Connection made");
