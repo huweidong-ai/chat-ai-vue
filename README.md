@@ -31,8 +31,6 @@ my-vue-project/
 │   ├── assets/
 │   ├── components/
 │   │   └── ConversationListAndChat.vue
-│   │   └── NewChat.vue
-│   │   └── SSEChat.vue
 │   ├── config/
 │   │   └── api.js
 │   ├── router/
