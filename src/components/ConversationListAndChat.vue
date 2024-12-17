@@ -4,20 +4,24 @@
       <h2>对话列表</h2>
       <button @click="navigateToNewChat" class="new-dialog-btn">新建对话</button>
       <ul>
-        <li v-for="dialog in dialogs" :key="dialog.id" @click="selectDialog(dialog.id)" :class="['dialog-item', selectedDialogId === dialog.id ? 'selected' : '']">
+        <li
+            v-for="dialog in dialogs"
+            :key="dialog.id"
+            @click="selectDialog(dialog.id)"
+            :class="['dialog-item', selectedDialogId === dialog.id ? 'selected' : '']">
           {{ dialog.title }} - {{ formatDate(dialog.createdAt) }}
         </li>
       </ul>
     </div>
     <div class="chat-container" v-if="selectedDialog || !hasSelectedDialogInitially">
       <header class="chat-header">
-        <h1>{{ chatHeaderTitle }}</h1>
+        <h3>{{ chatHeaderTitle }}</h3>
       </header>
       <main class="chat-body">
         <ul class="message-list">
           <li v-for="(msg, index) in messagesToShow" :key="index" :class="['message', msg.type]">
             <div class="avatar">
-              <span>{{ msg.type === 'outgoing' ? 'Me' : 'AI' }}</span>
+              <span>{{ msg.type === 'outgoing' ? 'Me' : (msg.type === 'system' ? '系统' : 'AI') }}</span>
             </div>
             <span v-if="msg.type === 'system'" class="message-content">{{ msg.content }}</span>
             <span v-else v-html="renderMarkdown(msg.content)" class="message-content"></span>
@@ -25,18 +29,18 @@
         </ul>
       </main>
       <footer class="chat-footer">
-        <textarea
-            v-model="message"
-            @keydown.enter.prevent="sendMessageOrStop"
-            placeholder="Type a message..."
-            class="message-input"
-            rows="1"
-            ref="messageInput"
-        ></textarea>
-
-        <button @click="sendMessageOrStop" :class="['btn', isCurrentDialogStreaming ? 'send-button-red' : 'send-button']">
-          {{ isCurrentDialogStreaming ? '停止' : '发送' }}
-        </button>
+        <div class="message-input-wrapper">
+          <textarea
+              v-model="message"
+              @keydown.enter.prevent="sendMessageOrStop"
+              placeholder="Type a message..."
+              class="message-input"
+              ref="messageInput"
+          ></textarea>
+          <button @click="sendMessageOrStop" :class="['btn', isCurrentDialogStreaming ? 'send-button-red' : 'send-button']">
+            {{ isCurrentDialogStreaming ? '停止' : '发送' }}
+          </button>
+        </div>
       </footer>
     </div>
     <div class="chat-container empty-chat" v-else>
@@ -90,7 +94,7 @@ export default {
         if (messageInput.value) {
           // 让 textarea 的高度自动适应内容
           messageInput.value.style.height = 'auto';
-          messageInput.value.style.height = messageInput.value.scrollHeight + 'px';
+          messageInput.value.style.height = Math.min(messageInput.value.scrollHeight, 200) + 'px'; // 设置最大高度为200px
         }
       });
     };
@@ -317,11 +321,8 @@ export default {
     });
 
     const chatHeaderTitle = computed(() => {
-      if (selectedDialog.value && selectedDialog.value.messages.length > 0) {
-        const lastMessage = selectedDialog.value.messages[selectedDialog.value.messages.length - 1];
-        if (lastMessage.type === 'incoming') {
-          return lastMessage.content.split('\n')[0]; // 显示第一行作为标题
-        }
+      if (isCurrentDialogStreaming.value) {
+        return 'AI回复中...';
       }
       return '聊天窗口';
     });
@@ -424,7 +425,7 @@ export default {
 .chat-header {
   background-color: #4CAF50;
   color: white;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   text-align: center;
 }
 
@@ -474,6 +475,7 @@ export default {
   padding: 0.5rem;
   border-radius: 1rem;
   background-color: #f1f1f1;
+  text-align: left; /* 确保内容左对齐 */
 }
 
 .chat-footer {
@@ -482,16 +484,26 @@ export default {
   background-color: #f8f9fa;
 }
 
+.message-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .message-input {
-  flex-grow: 1;
-  resize: none;
+  width: 100%;
+  resize: vertical;
   border: 1px solid #ccc;
   border-radius: 0.5rem;
   padding: 0.5rem;
-  margin-right: 1rem;
+  box-sizing: border-box;
+  max-height: 200px; /* 设置最大高度为200px */
+  overflow-y: auto;
 }
 
 .btn {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 0.5rem;
