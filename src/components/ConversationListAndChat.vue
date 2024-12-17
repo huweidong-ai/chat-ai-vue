@@ -13,7 +13,7 @@
         </li>
       </ul>
     </div>
-    <div class="chat-container" v-if="selectedDialog || !hasSelectedDialogInitially">
+    <div class="chat-container">
       <header class="chat-header">
         <h3>{{ chatHeaderTitle }}</h3>
       </header>
@@ -43,9 +43,6 @@
         </div>
       </footer>
     </div>
-    <div class="chat-container empty-chat" v-else>
-      <p>请选择一个对话或新建一个对话。</p>
-    </div>
   </div>
 </template>
 
@@ -69,18 +66,16 @@ export default {
     const selectedDialogId = ref(null);
     const message = ref('');
     const messageInput = ref(null);
-    const hasSelectedDialogInitially = ref(false);
 
     const loadDialogs = () => {
       dialogs.value = DialogService.getAllDialogs();
       if (dialogs.value.length > 0) {
         selectedDialogId.value = dialogs.value[0].id; // 默认选择第一个对话
-        hasSelectedDialogInitially.value = true;
       }
     };
 
     const navigateToNewChat = () => {
-      // 创建一个新的对话但不立即添加到对话列表中
+      // 清空当前对话内容
       selectedDialogId.value = null;
       message.value = '';
     };
@@ -103,27 +98,21 @@ export default {
       if (message.value.trim()) {
         autoGrow(); // 确保在发送前更新高度
 
-        if (!selectedDialogId.value) {
-          // 如果没有选中的对话，则创建新的对话并添加到对话列表中
-          let newDialogTitle = message.value.substring(0, 50); // 截取前50个字符作为标题
-          if (newDialogTitle.length < message.value.length) {
-            newDialogTitle += '...'; // 添加省略号
-          }
-          const newDialog = DialogService.createDialog(newDialogTitle);
-          dialogs.value.push(newDialog);
-          selectedDialogId.value = newDialog.id;
+        let newDialogTitle = message.value.substring(0, 50); // 截取前50个字符作为标题
+        if (newDialogTitle.length < message.value.length) {
+          newDialogTitle += '...'; // 添加省略号
         }
 
-        // 确保 selectedDialog 已经被正确设置
-        if (!selectedDialog.value) {
-          selectedDialog.value = DialogService.getDialogById(selectedDialogId.value);
-        }
+        // 如果没有选中的对话，则创建新的对话并添加到对话列表中
+        const newDialog = DialogService.createDialog(newDialogTitle);
+        dialogs.value.unshift(newDialog); // 将新对话添加到列表开头
+        selectedDialogId.value = newDialog.id;
 
         // 发送消息到服务器
         const data = { question: message.value, userId: '123' };
         startEventSource(data);
 
-        selectedDialog.value.messages.push({ content: message.value, type: 'outgoing' });
+        newDialog.messages.push({ content: message.value, type: 'outgoing' });
         message.value = ''; // 清空输入框
       }
     };
@@ -317,6 +306,8 @@ export default {
       if (newId !== null) {
         selectedDialog.value = DialogService.getDialogById(newId);
         scrollToBottom();
+      } else {
+        selectedDialog.value = null;
       }
     });
 
@@ -365,8 +356,7 @@ export default {
       selectDialog,
       formatDate,
       chatHeaderTitle,
-      messagesToShow,
-      hasSelectedDialogInitially
+      messagesToShow
     };
   }
 };
