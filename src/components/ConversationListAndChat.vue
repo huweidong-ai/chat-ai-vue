@@ -9,13 +9,16 @@
         </li>
       </ul>
     </div>
-    <div class="chat-container" v-if="selectedDialog">
+    <div class="chat-container" v-if="selectedDialog || !hasSelectedDialogInitially">
       <header class="chat-header">
-        <h1>{{ selectedDialog.title }}</h1>
+        <h1>{{ chatHeaderTitle }}</h1>
       </header>
       <main class="chat-body">
         <ul class="message-list">
-          <li v-for="(msg, index) in selectedDialog.messages" :key="index" :class="['message', msg.type]">
+          <li v-for="(msg, index) in messagesToShow" :key="index" :class="['message', msg.type]">
+            <div class="avatar">
+              <span>{{ msg.type === 'outgoing' ? 'Me' : 'AI' }}</span>
+            </div>
             <span v-if="msg.type === 'system'" class="message-content">{{ msg.content }}</span>
             <span v-else v-html="renderMarkdown(msg.content)" class="message-content"></span>
           </li>
@@ -43,7 +46,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
+import { ref, onMounted, nextTick, watch, computed, onUnmounted } from 'vue';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import API_CONFIG from '@/config/api'; // 导入 API 配置
 import { parse as markedParse } from 'marked'; // 导入 marked 解析函数
@@ -62,17 +65,20 @@ export default {
     const selectedDialogId = ref(null);
     const message = ref('');
     const messageInput = ref(null);
+    const hasSelectedDialogInitially = ref(false);
 
     const loadDialogs = () => {
       dialogs.value = DialogService.getAllDialogs();
+      if (dialogs.value.length > 0) {
+        selectedDialogId.value = dialogs.value[0].id; // 默认选择第一个对话
+        hasSelectedDialogInitially.value = true;
+      }
     };
 
     const navigateToNewChat = () => {
-      // 创建一个新的对话并添加到对话列表中
-      const newDialog = DialogService.createDialog();
-      dialogs.value.push(newDialog);
-      // 选择新创建的对话
-      selectedDialogId.value = newDialog.id;
+      // 创建一个新的对话但不立即添加到对话列表中
+      selectedDialogId.value = null;
+      message.value = '';
     };
 
     const selectDialog = (id) => {
@@ -92,9 +98,27 @@ export default {
     const sendMessage = () => {
       if (message.value.trim()) {
         autoGrow(); // 确保在发送前更新高度
+
+        if (!selectedDialogId.value) {
+          // 如果没有选中的对话，则创建新的对话并添加到对话列表中
+          let newDialogTitle = message.value.substring(0, 50); // 截取前50个字符作为标题
+          if (newDialogTitle.length < message.value.length) {
+            newDialogTitle += '...'; // 添加省略号
+          }
+          const newDialog = DialogService.createDialog(newDialogTitle);
+          dialogs.value.push(newDialog);
+          selectedDialogId.value = newDialog.id;
+        }
+
+        // 确保 selectedDialog 已经被正确设置
+        if (!selectedDialog.value) {
+          selectedDialog.value = DialogService.getDialogById(selectedDialogId.value);
+        }
+
         // 发送消息到服务器
         const data = { question: message.value, userId: '123' };
         startEventSource(data);
+
         selectedDialog.value.messages.push({ content: message.value, type: 'outgoing' });
         message.value = ''; // 清空输入框
       }
@@ -286,15 +310,28 @@ export default {
     });
 
     watch(selectedDialogId, (newId) => {
-      selectedDialog.value = DialogService.getDialogById(newId);
-      scrollToBottom();
+      if (newId !== null) {
+        selectedDialog.value = DialogService.getDialogById(newId);
+        scrollToBottom();
+      }
+    });
+
+    const chatHeaderTitle = computed(() => {
+      if (selectedDialog.value && selectedDialog.value.messages.length > 0) {
+        const lastMessage = selectedDialog.value.messages[selectedDialog.value.messages.length - 1];
+        if (lastMessage.type === 'incoming') {
+          return lastMessage.content.split('\n')[0]; // 显示第一行作为标题
+        }
+      }
+      return '聊天窗口';
+    });
+
+    const messagesToShow = computed(() => {
+      return selectedDialog.value ? selectedDialog.value.messages : [];
     });
 
     onMounted(() => {
       loadDialogs();
-      if (dialogs.value.length > 0) {
-        selectedDialogId.value = dialogs.value[0].id; // 默认选择第一个对话
-      }
     });
 
     onUnmounted(() => {
@@ -325,7 +362,10 @@ export default {
       isCurrentDialogStreaming,
       navigateToNewChat,
       selectDialog,
-      formatDate
+      formatDate,
+      chatHeaderTitle,
+      messagesToShow,
+      hasSelectedDialogInitially
     };
   }
 };
@@ -341,6 +381,7 @@ export default {
   width: 30%;
   padding: 1rem;
   border-right: 1px solid #ccc;
+  overflow-y: auto;
 }
 
 .new-dialog-btn {
@@ -389,6 +430,8 @@ export default {
 
 .chat-body {
   flex-grow: 1;
+  min-height: 100px; /* 设置最小高度 */
+  max-height: 500px; /* 设置最大高度 */
   overflow-y: auto;
   padding: 1rem;
 }
@@ -401,14 +444,29 @@ export default {
 
 .message {
   margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
 }
 
 .message.outgoing {
-  text-align: right;
+  justify-content: flex-end;
 }
 
 .message.incoming {
-  text-align: left;
+  justify-content: flex-start;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #ddd;
+  color: #555;
+  font-size: 14px;
+  margin-right: 1rem;
 }
 
 .message-content {
