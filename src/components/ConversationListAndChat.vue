@@ -76,8 +76,8 @@ export default {
 
     const navigateToNewChat = () => {
       // 清空当前对话内容
-      selectedDialogId.value = null;
       message.value = '';
+      selectedDialogId.value = null;
     };
 
     const selectDialog = (id) => {
@@ -98,22 +98,34 @@ export default {
       if (message.value.trim()) {
         autoGrow(); // 确保在发送前更新高度
 
-        let newDialogTitle = message.value.substring(0, 50); // 截取前50个字符作为标题
-        if (newDialogTitle.length < message.value.length) {
-          newDialogTitle += '...'; // 添加省略号
+        if (!selectedDialogId.value) {
+          // 如果没有选中的对话，则创建新的对话并添加到对话列表中
+          let newDialogTitle = message.value.substring(0, 50); // 截取前50个字符作为标题
+          if (newDialogTitle.length < message.value.length) {
+            newDialogTitle += '...'; // 添加省略号
+          }
+
+          const newDialog = DialogService.createDialog(newDialogTitle);
+          dialogs.value.unshift(newDialog); // 将新对话添加到列表开头
+          selectedDialogId.value = newDialog.id;
+
+          // 发送消息到服务器
+          const data = { question: message.value, userId: '123' };
+          startEventSource(data);
+
+          newDialog.messages.push({ content: message.value, type: 'outgoing' });
+          message.value = ''; // 清空输入框
+        } else {
+          // 如果已有选中的对话，则在该对话中添加消息
+          const currentDialog = DialogService.getDialogById(selectedDialogId.value);
+          currentDialog.messages.push({ content: message.value, type: 'outgoing' });
+
+          // 发送消息到服务器
+          const data = { question: message.value, userId: '123' };
+          startEventSource(data);
+
+          message.value = ''; // 清空输入框
         }
-
-        // 如果没有选中的对话，则创建新的对话并添加到对话列表中
-        const newDialog = DialogService.createDialog(newDialogTitle);
-        dialogs.value.unshift(newDialog); // 将新对话添加到列表开头
-        selectedDialogId.value = newDialog.id;
-
-        // 发送消息到服务器
-        const data = { question: message.value, userId: '123' };
-        startEventSource(data);
-
-        newDialog.messages.push({ content: message.value, type: 'outgoing' });
-        message.value = ''; // 清空输入框
       }
     };
 
