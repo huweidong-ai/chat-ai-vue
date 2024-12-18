@@ -41,6 +41,9 @@
             {{ isCurrentDialogStreaming ? '停止' : '发送' }}
           </button>
         </div>
+        <div class="disclaimer">
+          所有产出内容均源自人工智能模型，其内容的精确度和全面性不能确保，不反映我们的立场或看法。
+        </div>
       </footer>
     </div>
   </div>
@@ -491,6 +494,7 @@ export default {
 
 .chat-footer {
   display: flex;
+  flex-direction: column;
   padding: 1rem;
   background-color: #f8f9fa;
 }
@@ -508,6 +512,8 @@ export default {
   padding: 0.5rem;
   box-sizing: border-box;
   max-height: 200px; /* 设置最大高度为200px */
+  min-height: 70px;
+  font-size: 16px; /* 增大输入文字大小 */
   overflow-y: auto;
 }
 
@@ -538,4 +544,14 @@ export default {
 .send-button-red:hover {
   background-color: #d32f2f;
 }
+
+.disclaimer {
+  margin-top: 1rem;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+}
 </style>
+
+
+
