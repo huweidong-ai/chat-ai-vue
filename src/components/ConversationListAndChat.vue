@@ -53,14 +53,34 @@
 import { ref, onMounted, nextTick, watch, computed, onUnmounted } from 'vue';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import API_CONFIG from '@/config/api'; // 导入 API 配置
-import { parse as markedParse } from 'marked'; // 导入 marked 解析函数
 import DialogService from '@/services/DialogService';
+import { Marked } from 'marked'; // 导入 Marked 类
+import { markedHighlight } from "marked-highlight"; // 导入 markedHighlight 插件
+import hljs from 'highlight.js/lib/core'; // 引入核心模块
+import javascript from 'highlight.js/lib/languages/javascript'; // 引入你需要的语言
+import python from 'highlight.js/lib/languages/python'; // 示例：引入 Python 语言
+import java from 'highlight.js/lib/languages/java'; // 示例：引入 Java 语言
+import shell from 'highlight.js/lib/languages/shell'; // 示例：引入 Shell 语言
+import sql from 'highlight.js/lib/languages/sql'; // 示例：引入 SQL 语言
+import plaintext from 'highlight.js/lib/languages/plaintext'; // 引入纯文本语言
+import 'highlight.js/styles/atom-one-dark.css'; // 引入默认样式
 
-// 定义 Markdown 解析选项
-const markedOptions = {
-  sanitize: true, // 禁用 HTML 标签，防止 XSS 攻击
-  smartypants: true, // 转换常见的 ASCII 字符为更漂亮的 Unicode 等效字符
-};
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('shell', shell);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('plaintext', plaintext);
+
+const renderer = new Marked(
+    markedHighlight({
+      langPrefix: 'hljs language-',
+      highlight(code, lang) {
+        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+        return hljs.highlight(code, { language }).value;
+      }
+    })
+);
 
 export default {
   name: 'ConversationListAndChat',
@@ -277,8 +297,8 @@ export default {
     };
 
     const renderMarkdown = (content) => {
-      // 使用 marked 解析 Markdown 并返回 HTML 字符串
-      return markedParse(content || '', markedOptions);
+      // 使用自定义的 renderer 解析 Markdown 并返回 HTML 字符串
+      return renderer.parse(content || '');
     };
 
     const getApiUrl = () => {
