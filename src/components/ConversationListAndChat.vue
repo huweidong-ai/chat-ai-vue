@@ -37,7 +37,8 @@
               class="message-input"
               ref="messageInput"
           ></textarea>
-          <button @click="sendMessageOrStop" :class="['btn', isCurrentDialogStreaming ? 'send-button-red' : 'send-button']">
+          <button @click="sendMessageOrStop"
+                  :class="['btn', isCurrentDialogStreaming ? 'send-button-red' : 'send-button']">
             {{ isCurrentDialogStreaming ? '停止' : '发送' }}
           </button>
         </div>
@@ -50,12 +51,12 @@
 </template>
 
 <script>
-import { ref, onMounted, nextTick, watch, computed, onUnmounted } from 'vue';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
+import {ref, onMounted, nextTick, watch, computed, onUnmounted} from 'vue';
+import {fetchEventSource} from '@microsoft/fetch-event-source';
 import API_CONFIG from '@/config/api'; // 导入 API 配置
 import DialogService from '@/services/DialogService';
-import { Marked } from 'marked'; // 导入 Marked 类
-import { markedHighlight } from "marked-highlight"; // 导入 markedHighlight 插件
+import {Marked} from 'marked'; // 导入 Marked 类
+import {markedHighlight} from "marked-highlight"; // 导入 markedHighlight 插件
 import hljs from 'highlight.js/lib/core'; // 引入核心模块
 import javascript from 'highlight.js/lib/languages/javascript'; // 引入你需要的语言
 import python from 'highlight.js/lib/languages/python'; // 示例：引入 Python 语言
@@ -77,7 +78,7 @@ const renderer = new Marked(
       langPrefix: 'hljs language-',
       highlight(code, lang) {
         const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-        return hljs.highlight(code, { language }).value;
+        return hljs.highlight(code, {language}).value;
       }
     })
 );
@@ -127,7 +128,7 @@ export default {
 
         if (!selectedDialogId.value) {
           // 如果没有选中的对话，则创建新的对话并添加到对话列表中
-          let newDialogTitle = message.value.substring(0, 50); // 截取前50个字符作为标题
+          let newDialogTitle = message.value.substring(0, 20); // 截取前20个字符作为标题
           if (newDialogTitle.length < message.value.length) {
             newDialogTitle += '...'; // 添加省略号
           }
@@ -137,17 +138,17 @@ export default {
           selectedDialogId.value = newDialog.id;
 
           // 发送消息到服务器
-          const data = { question: message.value, userId: '123' };
+          const data = {question: message.value, userId: '123'};
           startEventSource(data);
 
-          addMessage({ content: message.value, type: 'outgoing' });
+          addMessage({content: message.value, type: 'outgoing'});
           message.value = ''; // 清空输入框
         } else {
           // 如果已有选中的对话，则在该对话中添加消息
-          addMessage({ content: message.value, type: 'outgoing' });
+          addMessage({content: message.value, type: 'outgoing'});
 
           // 发送消息到服务器
-          const data = { question: message.value, userId: '123' };
+          const data = {question: message.value, userId: '123'};
           startEventSource(data);
 
           message.value = ''; // 清空输入框
@@ -200,7 +201,7 @@ export default {
 
       // 使用 API_CONFIG 中的配置构建完整的 URL
       const url = `${getApiUrl()}/sse/stream/chat`;
-      const controller = new AbortController(); // 创建一个新的 AbortController 实例
+      const controller = new AbortController(); // 用于中断请求
       controllersMap.value[dialogId] = controller;
 
       fetchEventSource(url, {
@@ -211,36 +212,36 @@ export default {
         },
         body: JSON.stringify(data),
         signal: controller.signal,
+        openWhenHidden: true, // 有时在页面切换或隐藏后再显示时，可能会导致重复请求。可以通过设置openWhenHidden为true来避免这种情况‌
+
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
-            console.log("Connection made");
+            console.log('连接已打开');
             setDialogIsStreaming(dialogId, true); // 开始接收流数据
           } else {
             throw new Error(`Unexpected response status ${response.status}`);
           }
         },
+
         onmessage(event) {
+          console.log('收到消息');
           try {
             // 解析服务器返回的 JSON 数据
             const eventData = JSON.parse(event.data);
-
             if (eventData.code === 200) {
               // 更新 sseId 如果存在
               if (eventData.sseId) {
                 setDialogSseId(dialogId, eventData.sseId);
               }
-
               // 如果 currentIncomingMessage 还未初始化，则初始化它
               let currentIncomingMessage = getDialogIncomingMessage(dialogId);
               if (!currentIncomingMessage) {
-                currentIncomingMessage = { content: '', type: 'incoming' };
+                currentIncomingMessage = {content: '', type: 'incoming'};
                 addMessage(currentIncomingMessage);
                 setDialogIncomingMessage(dialogId, currentIncomingMessage);
               }
-
               // 追加接收到的部分消息
               currentIncomingMessage.content += eventData.answer;
-
               // 检查是否已经完成对话
               if (eventData.finish) {
                 setDialogIsStreaming(dialogId, false); // 停止接收流数据
@@ -259,19 +260,23 @@ export default {
             setDialogIncomingMessage(dialogId, null);
           }
         },
+
         onclose() {
-          console.log('Connection closed');
+          console.log('连接已关闭');
           if (!getDialogIsStreaming(dialogId)) {
             addSystemMessage('连接已关闭。');
           }
           setDialogIsStreaming(dialogId, false); // 停止接收流数据
           setDialogIncomingMessage(dialogId, null); // 清空当前消息缓冲区
         },
-        onerror(error) {
-          console.error('Error with the event source:', error);
-          addSystemMessage('与服务器的连接发生错误。');
+
+        onerror() {
+          console.error('连接发生错误');
+          controller.abort(); // 中断请求
+          addSystemMessage('连接发生错误。');
           setDialogIsStreaming(dialogId, false); // 停止接收流数据
           setDialogIncomingMessage(dialogId, null); // 清空当前消息缓冲区
+          throw new Error("请求失败，停止重试");
         }
       });
     };
@@ -363,7 +368,7 @@ export default {
     };
 
     const addSystemMessage = (content) => {
-      addMessage({ content, type: 'system' });
+      addMessage({content, type: 'system'});
     };
 
     onMounted(() => {
