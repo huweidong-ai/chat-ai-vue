@@ -132,7 +132,7 @@ export default {
             newDialogTitle += '...'; // 添加省略号
           }
 
-          const newDialog = DialogService.createDialog(newDialogTitle);
+          const newDialog = DialogService.createDialog(newDialogTitle,  [{content: message.value, type: 'Me'}]);
           dialogs.value.unshift(newDialog); // 将新对话添加到列表开头
           selectedDialogId.value = newDialog.id;
 
