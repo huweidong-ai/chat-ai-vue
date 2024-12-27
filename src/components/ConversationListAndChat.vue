@@ -363,6 +363,8 @@ export default {
       if (selectedDialog.value) {
         selectedDialog.value.messages.push(message);
         scrollToBottom(); // 确保每次添加消息后滚动到底部
+      } else {
+        console.error('No selected dialog to add message to'); // 添加日志
       }
     };
 
@@ -514,6 +516,11 @@ export default {
   border-radius: 1rem;
   background-color: #f1f1f1;
   text-align: left; /* 确保内容左对齐 */
+  word-break: break-word; /* 确保长单词换行 */
+  overflow-wrap: break-word; /* 确保长单词换行 */
+  white-space: pre-line; /* 保持空白符和换行符 */
+  display: flex; /* 使用 Flexbox 布局 */
+  flex-direction: column; /* 子元素垂直排列 */
 }
 
 .chat-footer {
@@ -535,7 +542,7 @@ export default {
   border-radius: 0.5rem;
   padding: 0.5rem;
   box-sizing: border-box;
-  max-height: 200px; /* 设置最大高度为200px */
+  max-height: 300px; /* 设置最大高度为300px */
   min-height: 70px;
   font-size: 16px; /* 增大输入文字大小 */
   overflow-y: auto;
@@ -576,6 +583,3 @@ export default {
   text-align: center;
 }
 </style>
-
-
-
