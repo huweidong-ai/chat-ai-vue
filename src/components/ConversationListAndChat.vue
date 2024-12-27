@@ -21,7 +21,7 @@
         <ul class="message-list">
           <li v-for="(msg, index) in messagesToShow" :key="index" :class="['message', msg.type]">
             <div class="avatar">
-              <span>{{ msg.type === 'outgoing' ? 'Me' : (msg.type === 'system' ? '系统' : 'AI') }}</span>
+              <span>{{ msg.type === 'Me' ? '我' : (msg.type === 'system' ? '系统' : 'AI') }}</span>
             </div>
             <span v-if="msg.type === 'system'" class="message-content">{{ msg.content }}</span>
             <span v-else v-html="renderMarkdown(msg.content)" class="message-content"></span>
@@ -107,7 +107,6 @@ export default {
     const selectDialog = (id) => {
       if (selectedDialogId.value !== id) {
         // 不再立即关闭当前对话的连接
-        // closeConnection(selectedDialogId.value); // 关闭当前对话的连接
       }
       selectedDialogId.value = parseInt(id);
     };
@@ -141,11 +140,11 @@ export default {
           const data = {question: message.value, userId: '123'};
           startEventSource(data);
 
-          addMessage({content: message.value, type: 'outgoing'});
+          addMessage({content: message.value, type: 'Me'});
           message.value = ''; // 清空输入框
         } else {
           // 如果已有选中的对话，则在该对话中添加消息
-          addMessage({content: message.value, type: 'outgoing'});
+          addMessage({content: message.value, type: 'Me'});
 
           // 发送消息到服务器
           const data = {question: message.value, userId: '123'};
@@ -236,7 +235,7 @@ export default {
               // 如果 currentIncomingMessage 还未初始化，则初始化它
               let currentIncomingMessage = getDialogIncomingMessage(dialogId);
               if (!currentIncomingMessage) {
-                currentIncomingMessage = {content: '', type: 'incoming'};
+                currentIncomingMessage = {content: '', type: 'AI'};
                 addMessage(currentIncomingMessage);
                 setDialogIncomingMessage(dialogId, currentIncomingMessage);
               }
@@ -488,11 +487,11 @@ export default {
   align-items: flex-start;
 }
 
-.message.outgoing {
+.message.Me {
   justify-content: flex-end;
 }
 
-.message.incoming {
+.message.AI {
   justify-content: flex-start;
 }
 
