@@ -30,6 +30,7 @@
       </main>
       <footer class="chat-footer">
         <div class="message-input-wrapper">
+          <button @click="uploadFile" class="upload-btn" title="支持上传文件(最多 50个，每个 100 MB)接受 pdf、docx、xlsx、pptx、txt、png、jpeg等">+</button>
           <textarea
               v-model="message"
               @keydown.enter.prevent="sendMessageOrStop"
@@ -211,7 +212,7 @@ export default {
         },
         body: JSON.stringify(data),
         signal: controller.signal,
-        openWhenHidden: true, // 有时在页面切换或隐藏后再显示时，可能会导致重复请求。可以通过设置openWhenHidden为true来避免这种情况‌
+        openWhenHidden: true, // 有时在页面切换或隐藏后再显示时，可能会导致重复请求。页面不可见时是否开启连接。
 
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
@@ -390,6 +391,35 @@ export default {
       return new Date(date).toLocaleString();
     };
 
+    const uploadFile = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('isPreview', false);
+
+          fetch('/uploadDialogueFile', {
+            method: 'POST',
+            body: formData
+          })
+              .then(response => response.json())
+              .then(data => {
+                console.log('Upload success:', data);
+                // 处理上传成功后的逻辑
+              })
+              .catch(error => {
+                console.error('Upload error:', error);
+                // 处理上传失败后的逻辑
+              });
+        }
+      };
+      input.click();
+    };
+
+
     return {
       dialogs,
       selectedDialogId,
@@ -406,7 +436,8 @@ export default {
       selectDialog,
       formatDate,
       chatHeaderTitle,
-      messagesToShow
+      messagesToShow,
+      uploadFile
     };
   }
 };
@@ -582,4 +613,21 @@ export default {
   color: #888;
   text-align: center;
 }
+
+.upload-btn {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+.upload-btn:hover {
+  background-color: #45a049;
+}
+
 </style>

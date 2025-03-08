@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "axios": "^1.8.1",
     "core-js": "^3.8.3",
     "marked": "^15.0.3",
     "marked-highlight": "^2.2.1",

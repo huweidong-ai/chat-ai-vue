@@ -20,6 +20,13 @@ export default {
   color: #2c3e50;
   margin-top: 60px;
 }
+
+/* 移除重复的style标签 */
+body {
+  margin: 0;
+  background-color: #f4f4f9;
+  font-family: Arial, sans-serif;
+}
 </style>
 
 
