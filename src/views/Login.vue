@@ -15,6 +15,7 @@
 
 <script>
 import { userService } from '@/services/userService';
+import { setToken } from '@/services/authService';
 
 export default {
   name: 'UserLogin',
@@ -43,7 +44,7 @@ export default {
         
         if (data.success) {
           const token = data.data.token;
-          this.setCookie('authToken', token, 2);
+          setToken(token);
           this.$router.push('/chat');
         } else {
           this.message = data.message || '登录失败，请检查用户名和密码';
@@ -51,11 +52,6 @@ export default {
       } catch (error) {
         this.message = '网络错误，请重试';
       }
-    },
-    setCookie(name, value, hours) {
-      const date = new Date();
-      date.setTime(date.getTime() + (hours * 60 * 60 * 1000));
-      document.cookie = `${name}=${encodeURIComponent(value)};expires=${date.toUTCString()};path=/`;
     }
   }
 };
