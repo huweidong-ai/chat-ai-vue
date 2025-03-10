@@ -11,6 +11,9 @@
 </template>
 
 <script>
+import { uploadFile } from '@/services/fileService';
+import { handleUnauthorized } from '@/services/authService';
+
 export default {
   name: 'FileUpload',
   data() {
@@ -22,17 +25,7 @@ export default {
     goToChat() {
       this.$router.push('/chat');
     },
-    getCookie(name) {
-      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
-      for (const cookie of cookies) {
-        const [key, value] = cookie.split('=');
-        if (key === name) {
-          return decodeURIComponent(value);
-        }
-      }
-      return null;
-    },
-    handleSubmit() {
+    async handleSubmit() {
       const fileInput = this.$refs.fileInput;
       if (!fileInput.files.length) {
         this.message = '请选择一个文件';
@@ -40,44 +33,16 @@ export default {
       }
 
       const file = fileInput.files[0];
-      const formData = new FormData();
-      formData.append('file', file);
+      const result = await uploadFile(file);
 
-      const token = this.getCookie('authToken');
-      if (!token) {
-        this.message = '未登录，请先登录';
-        setTimeout(() => window.location.href = 'login.html', 2000);
-        return;
+      if (result.success) {
+        this.message = result.message;
+      } else {
+        this.message = result.message;
+        if (result.message === '未授权，请重新登录') {
+          handleUnauthorized();
+        }
       }
-
-      fetch('/uploadFile', {
-        method: 'POST',
-        headers: {
-          Authorization: token
-        },
-        body: formData
-      })
-      .then(response => {
-        if (response.status === 401) {
-          throw new Error('未授权，请重新登录');
-        }
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error('上传失败，请检查网络或服务器状态');
-        }
-      })
-      .then(data => {
-        this.message = '文件上传成功！' + (data.message ? `(${data.message})` : '');
-      })
-      .catch(error => {
-        if (error.message === '未授权，请重新登录') {
-          this.message = error.message;
-          setTimeout(() => window.location.href = 'login.html', 2000);
-        } else {
-          this.message = error.message;
-        }
-      });
     }
   }
 };
@@ -93,13 +58,7 @@ body {
   height: 100vh;
   margin: 0;
 }
-#添加导航按钮样式
-.nav-button {
-    margin: 10px;
-    padding: 8px 16px;
-    background-color: #28a745;
-    color: white;
-}
+
 .upload-container {
   background-color: #fff;
   padding: 20px;

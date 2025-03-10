@@ -32,7 +32,7 @@ my-vue-project/
 │   ├── components/ # 可复用组件
 │   │   └── ConversationListAndChat.vue # 可复用的聊天组件
 │   ├── config/
-│   │   └── api.js  # API 配置（包括接口地址、请求方法等）
+│   │   └── constant.js  # API 配置（包括接口地址、请求方法等）
 │   ├── router/         # 路由配置
 │   │   └── index.js    # 路由配置（映射 views 中的组件）
 │   ├── services/       # 服务层（处理业务逻辑）

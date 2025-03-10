@@ -1,5 +1,6 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router';
+import { isAuthenticated } from '@/services/authService';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
 import Upload from '../views/Upload.vue';
@@ -41,10 +42,8 @@ const router = createRouter({
 
 // 添加全局路由守卫
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = document.cookie.includes('authToken=');
-    
     if (to.matched.some(record => record.meta.requiresAuth)) {
-        if (!isAuthenticated) {
+        if (!isAuthenticated()) {
             next('/login');
         } else {
             next();

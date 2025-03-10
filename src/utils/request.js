@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { getToken, handleUnauthorized } from '@/services/authService';
-
 const request = axios.create({
-  baseURL: '/',
+  baseURL: process.env.VUE_APP_BASE_URL,
   timeout: 10000,
   headers: {'Content-Type': 'application/json'}
 });
@@ -12,7 +11,8 @@ request.interceptors.request.use(
   config => {
     const token = getToken();
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      // config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers['Authorization'] = token;
     }
     return config;
   },
@@ -41,6 +41,7 @@ request.interceptors.response.use(
         case 404:
           return Promise.reject(new Error('请求的资源不存在'));
         case 500:
+        case 502:
           return Promise.reject(new Error('服务器内部错误'));
         default:
           return Promise.reject(new Error('网络错误'));

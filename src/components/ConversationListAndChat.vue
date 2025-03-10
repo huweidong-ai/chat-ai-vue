@@ -18,7 +18,6 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import DialogService from '@/services/DialogService';
 import { chatService } from '@/services/chatService';
 import ConversationList from './chat/ConversationList.vue';
@@ -81,31 +80,20 @@ export default {
     const startEventSource = (data) => {
       const dialogId = selectedDialogId.value;
       if (getDialogIsStreaming(dialogId)) {
-        console.warn('Already streaming, ignoring duplicate request.');
+        console.warn('已经在进行对话流，忽略重复请求。');
         return;
       }
-
+    
       const controller = new AbortController();
       controllersMap.value[dialogId] = controller;
-
-      fetchEventSource('/aiApi/sse/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
-        },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-        openWhenHidden: true,
-
+    
+      chatService.startChatStream(data, {
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
             setDialogIsStreaming(dialogId, true);
-          } else {
-            throw new Error(`Unexpected response status ${response.status}`);
           }
         },
-
+    
         onmessage(event) {
           try {
             const eventData = JSON.parse(event.data);
@@ -125,34 +113,34 @@ export default {
                 setDialogIncomingMessage(dialogId, null);
               }
             } else {
-              addSystemMessage(`Error: ${eventData.msg}`);
-              setDialogIsStreaming(dialogId, false);
-              setDialogIncomingMessage(dialogId, null);
+              addSystemMessage(`错误: ${eventData.msg}`);
+              closeConnection(dialogId);
             }
           } catch (e) {
-            console.error('Failed to parse event data:', e);
+            console.error('解析事件数据失败:', e);
             addSystemMessage('无法解析服务器返回的数据：' + e.message);
-            setDialogIsStreaming(dialogId, false);
-            setDialogIncomingMessage(dialogId, null);
+            closeConnection(dialogId);
           }
         },
-
+    
         onclose() {
-          if (!getDialogIsStreaming(dialogId)) {
-            addSystemMessage('连接已关闭。');
+          if (getDialogIsStreaming(dialogId)) {
+            addSystemMessage('连接已关闭');
+            closeConnection(dialogId);
           }
-          setDialogIsStreaming(dialogId, false);
-          setDialogIncomingMessage(dialogId, null);
         },
-
-        onerror() {
-          console.error('连接发生错误');
-          controller.abort();
-          addSystemMessage('连接发生错误。');
-          setDialogIsStreaming(dialogId, false);
-          setDialogIncomingMessage(dialogId, null);
-          throw new Error("请求失败，停止重试");
-        }
+    
+        onerror(error) {
+          console.error('连接发生错误:', error);
+          if (error.message === '未授权，请重新登录') {
+            addSystemMessage('登录已过期，请重新登录');
+          } else {
+            addSystemMessage('连接发生错误，请稍后重试');
+          }
+          closeConnection(dialogId);
+        },
+    
+        signal: controller.signal
       });
     };
 
@@ -183,7 +171,7 @@ export default {
           formData.append('file', file);
           formData.append('isPreview', false);
 
-          fetch(`/aiApi/uploadDialogueFile`, {
+          fetch(`/uploadDialogueFile`, {
             method: 'POST',
             body: formData
           })
