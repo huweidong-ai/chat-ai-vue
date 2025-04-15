@@ -3,7 +3,7 @@ export const TOKEN_KEY = 'authToken';
 
 // 从Cookie中获取token
 export const getToken = () => {
-  return document.cookie.replace(/(?:(?:^|.*;s*)authToken\s*=\s*([^;]*).*$)|^.*$/, "$1");
+  return document.cookie.replace(/(?:^|.*;s*)authToken\s*=\s*([^;]*).*$|^.*$/, "$1");
 };
 
 // 设置token到Cookie
@@ -26,5 +26,5 @@ export const isAuthenticated = () => {
 // 处理未授权的情况
 export const handleUnauthorized = () => {
   removeToken();
-  window.location.href = '/login';
+  // window.location.href = '/login';
 };

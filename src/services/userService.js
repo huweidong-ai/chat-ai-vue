@@ -4,7 +4,7 @@ export const userService = {
   // 登录
   login(data) {
     return request({
-      url: '/login',  // 添加 /ai 前缀
+      url: '/login',
       method: 'post',
       data
     });
@@ -13,7 +13,7 @@ export const userService = {
   // 注册
   register(data) {
     return request({
-      url: '/register',  // 添加 /ai 前缀
+      url: '/register',
       method: 'post',
       data
     });
