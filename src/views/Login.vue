@@ -50,7 +50,11 @@ export default {
           this.message = data.message || '登录失败，请检查用户名和密码';
         }
       } catch (error) {
-        this.message = '网络错误，请重试';
+        if (error.message) {
+          this.message = error.message;
+        } else {
+          this.message = '网络错误，请重试';
+        }
       }
     }
   }
@@ -101,7 +105,6 @@ input[type="submit"]:hover {
   color: #d9534f;
 }
 
-#在样式最后添加
 .nav-link {
   margin-top: 15px;
   text-align: center;

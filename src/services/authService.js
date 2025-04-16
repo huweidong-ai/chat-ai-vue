@@ -26,5 +26,5 @@ export const isAuthenticated = () => {
 // 处理未授权的情况
 export const handleUnauthorized = () => {
   removeToken();
-  // window.location.href = '/login';
+  window.location.href = '/login';
 };

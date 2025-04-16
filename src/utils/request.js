@@ -34,8 +34,14 @@ request.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          handleUnauthorized();
-          break;
+          // 根据后端返回的错误码区分是token失效还是用户名密码错误
+          // console.log('status:', error.response.status);
+          // console.log('错误码:', error.response.data.code);
+          // console.log('错误信息:', error.response.data.message);
+          if (error.response.data.code === '20004') {
+            handleUnauthorized();
+          }
+          return Promise.reject(new Error(error.response.data.message || '认证失败'));
         case 403:
           return Promise.reject(new Error('没有权限访问'));
         case 404:
