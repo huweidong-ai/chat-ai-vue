@@ -23,10 +23,15 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   response => {
     const { data } = response;
-    // 判断业务状态码
+    // 判断业务状态码{code: 200, data: {…}, message: '请求成功', success: true}
     if (data.code === 200 || data.success) {
-      return data;
+      return {
+        success: true,
+        data: data.data,
+        message: data.message || '操作成功'
+      };
     } else {
+      console.log('请求失败:', data.message);
       return Promise.reject(new Error(data.message || '请求失败'));
     }
   },
@@ -34,9 +39,7 @@ request.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          // 根据后端返回的错误码区分是token失效还是用户名密码错误
           // console.log('status:', error.response.status);
-          // console.log('错误码:', error.response.data.code);
           // console.log('错误信息:', error.response.data.message);
           if (error.response.data.code === '20004') {
             handleUnauthorized();

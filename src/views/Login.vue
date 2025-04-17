@@ -37,19 +37,32 @@ export default {
       }
 
       try {
+        console.log('开始登录请求...');
         const data = await userService.login({
           username: this.username,
           password: this.password
         });
+        console.log('登录响应:', data);
         
         if (data.success) {
+          // 清除所有cookie
+          document.cookie.split(';').forEach(cookie => {
+            const eqPos = cookie.indexOf('=');
+            const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          });
+          
           const token = data.data.token;
+          // console.log('设置token:', token);
           setToken(token);
-          this.$router.push('/chat');
+          console.log('准备跳转到/chat页面');
+          await this.$router.push('/chat');
+          console.log('跳转完成');
         } else {
           this.message = data.message || '登录失败，请检查用户名和密码';
         }
       } catch (error) {
+        console.error('登录过程出错:', error);
         if (error.message) {
           this.message = error.message;
         } else {
