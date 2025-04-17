@@ -57,6 +57,9 @@ export default {
 
     const handleSendMessage = (messageText) => {
       if (!selectedDialogId.value) {
+        if (typeof messageText !== 'string') {
+          messageText = messageText.content;
+        }
         let newDialogTitle = messageText.substring(0, 20);
         if (newDialogTitle.length < messageText.length) {
           newDialogTitle += '...';

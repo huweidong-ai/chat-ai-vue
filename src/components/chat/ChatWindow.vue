@@ -15,17 +15,38 @@
       </ul>
     </main>
     <footer class="chat-footer">
+      <div class="function-buttons">
+        <button 
+          @click="toggleDeepThinking" 
+          :class="['function-btn', isDeepThinking ? 'active' : '']">
+          <i class="fas fa-brain"></i>
+          深度思考
+        </button>
+        <button 
+          @click="toggleWebSearch" 
+          :class="['function-btn', isWebSearch ? 'active' : '']">
+          <i class="fas fa-search"></i>
+          联网搜索
+        </button>
+      </div>
       <div class="message-input-wrapper">
-        <button @click="uploadFile" class="upload-btn" title="支持上传文件(最多 50个，每个 100 MB)接受 pdf、docx、xlsx、pptx、txt、png、jpeg等">+</button>
         <textarea
           v-model="message"
           @keydown.enter.prevent="sendMessageOrStop"
-          placeholder="Type a message..."
+          placeholder="输入消息..."
           class="message-input"
           ref="messageInput"
+          @input="autoGrow"
         ></textarea>
-        <button @click="sendMessageOrStop"
-                :class="['btn', isStreaming ? 'send-button-red' : 'send-button']">
+        <div class="input-tools">
+          <button class="tool-btn" title="清空输入" @click="clearMessage">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <button @click="uploadFile" class="upload-btn" title="支持上传文件(最多 50个，每个 100 MB)接受 pdf、docx、xlsx、pptx、txt、png、jpeg等">+</button>
+        <button 
+          @click="sendMessageOrStop"
+          :class="['send-btn', isStreaming ? 'stop' : '']">
           {{ isStreaming ? '停止' : '发送' }}
         </button>
       </div>
@@ -48,6 +69,7 @@ import shell from 'highlight.js/lib/languages/shell';
 import sql from 'highlight.js/lib/languages/sql';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import 'highlight.js/styles/atom-one-dark.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('python', python);
@@ -82,6 +104,8 @@ export default {
   setup(props, { emit }) {
     const message = ref('');
     const messageInput = ref(null);
+    const isDeepThinking = ref(false);
+    const isWebSearch = ref(false);
 
     const autoGrow = () => {
       nextTick(() => {
@@ -92,11 +116,23 @@ export default {
       });
     };
 
+    const toggleDeepThinking = () => {
+      isDeepThinking.value = !isDeepThinking.value;
+    };
+
+    const toggleWebSearch = () => {
+      isWebSearch.value = !isWebSearch.value;
+    };
+
     const sendMessageOrStop = () => {
       if (props.isStreaming) {
         emit('stop-stream');
       } else if (message.value.trim()) {
-        emit('send-message', message.value);
+        const messageData = {
+          content: message.value,
+          mode: isDeepThinking.value ? 'deep_thinking' : (isWebSearch.value ? 'web_search' : 'normal')
+        };
+        emit('send-message', messageData);
         message.value = '';
         autoGrow();
       }
@@ -114,13 +150,24 @@ export default {
       return props.isStreaming ? 'AI回复中...' : '聊天窗口';
     });
 
+    const clearMessage = () => {
+      message.value = '';
+      autoGrow();
+    };
+
     return {
       message,
       messageInput,
+      isDeepThinking,
+      isWebSearch,
+      toggleDeepThinking,
+      toggleWebSearch,
       sendMessageOrStop,
       uploadFile,
       renderMarkdown,
-      chatHeaderTitle
+      chatHeaderTitle,
+      autoGrow,
+      clearMessage
     };
   }
 };
@@ -132,16 +179,20 @@ export default {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .chat-header {
-  background-color: #409eff;
+  background-color: #007BFF;
   color: white;
   padding: 12px 20px;
   text-align: center;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-bottom: 20px;
   font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .chat-body {
@@ -208,66 +259,122 @@ export default {
 }
 
 .chat-footer {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
   margin-top: 20px;
+}
+
+.function-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.function-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #dcdfe6;
+  border-radius: 20px;
+  background: white;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+}
+
+.function-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.function-btn.active {
+  background: #ecf5ff;
+  border-color: #409eff;
+  color: #409eff;
 }
 
 .message-input-wrapper {
   position: relative;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  min-height: 120px;
 }
 
 .message-input {
   width: 100%;
-  resize: vertical;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 12px;
-  box-sizing: border-box;
-  max-height: 300px;
-  min-height: 80px;
-  font-size: 14px;
-  overflow-y: auto;
-  margin-bottom: 12px;
-  transition: border-color 0.3s;
-}
-
-.message-input:focus {
+  border: none;
   outline: none;
-  border-color: #409eff;
+  background: transparent;
+  resize: none;
+  min-height: 24px;
+  max-height: 200px;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 4px 0;
+  margin-bottom: 30px;
 }
 
-.btn {
+.upload-btn {
+  padding: 6px 12px;
+  border: none;
+  background-color: #409eff;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.upload-btn:hover {
+  background-color: #66b1ff;
+}
+
+.input-tools {
+  display: flex;
+  gap: 8px;
+}
+
+.tool-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #606266;
+  transition: color 0.3s;
+}
+
+.tool-btn:hover {
+  color: #409eff;
+}
+
+.send-btn {
   position: absolute;
-  bottom: 20px;
   right: 12px;
-  padding: 8px 15px;
+  bottom: 10px;
+  padding: 8px 20px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  background-color: #409eff;
+  color: white;
   transition: all 0.3s;
 }
 
-.send-button {
-  background-color: #409eff;
-  color: white;
-}
-
-.send-button:hover {
+.send-btn:hover {
   background-color: #66b1ff;
 }
 
-.send-button-red {
+.send-btn.stop {
   background-color: #f56c6c;
-  color: white;
 }
 
-.send-button-red:hover {
+.send-btn.stop:hover {
   background-color: #f78989;
 }
 
@@ -282,7 +389,7 @@ export default {
 .upload-btn {
   position: absolute;
   left: 12px;
-  bottom: 20px;
+  bottom: 10px;
   padding: 8px 15px;
   border: none;
   border-radius: 4px;
