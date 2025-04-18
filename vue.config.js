@@ -17,5 +17,24 @@ module.exports = defineConfig({
                 secure: false,
             }
         }
+    },
+    configureWebpack: {
+        resolve: {
+            alias: {
+                '@': require('path').resolve(__dirname, 'src')
+            }
+        }
+    },
+    css: {
+        loaderOptions: {
+            css: {
+                url: {
+                    filter: (url) => {
+                        // 允许处理 node_modules 中的资源
+                        return !url.startsWith('/')
+                    }
+                }
+            }
+        }
     }
 })

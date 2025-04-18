@@ -13,21 +13,32 @@
       @stop-stream="handleStopStream"
       @upload-file="handleUploadFile"
     />
+    <LoginModal
+      v-if="showLoginModal"
+      :visible="showLoginModal"
+      @close="closeLoginModal"
+      @login-success="handleLoginSuccess"
+    />
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useAuthStore } from '@/store/modules/auth';
 import ChatSidebar from './ChatSidebar.vue';
 import ChatWindow from './ChatWindow.vue';
+import LoginModal from '../auth/LoginModal.vue';
 
 export default {
   name: 'ChatLayout',
   components: {
     ChatSidebar,
-    ChatWindow
+    ChatWindow,
+    LoginModal
   },
   setup() {
+    const authStore = useAuthStore();
+    const showLoginModal = ref(false);
     const chatHistory = ref([
       {
         id: '1',
@@ -51,7 +62,18 @@ export default {
       return chat ? chat.messages : [];
     });
 
+    // 检查是否需要登录
+    const checkAuth = () => {
+      if (!authStore.isLoggedIn) {
+        showLoginModal.value = true;
+        return false;
+      }
+      return true;
+    };
+
     const handleNewChat = () => {
+      if (!checkAuth()) return;
+
       const newChat = {
         id: String(Date.now()),
         title: '新对话',
@@ -63,10 +85,13 @@ export default {
     };
 
     const handleSelectChat = (chatId) => {
+      if (!checkAuth()) return;
       currentChatId.value = chatId;
     };
 
     const handleSendMessage = (messageData) => {
+      if (!checkAuth()) return;
+
       const chat = chatHistory.value.find(c => c.id === currentChatId.value);
       if (chat) {
         chat.messages.push({
@@ -88,25 +113,44 @@ export default {
     };
 
     const handleStopStream = () => {
+      if (!checkAuth()) return;
       isStreaming.value = false;
       // TODO: 实现停止流式响应的逻辑
     };
 
     const handleUploadFile = () => {
+      if (!checkAuth()) return;
       // TODO: 实现文件上传逻辑
       console.log('File upload triggered');
     };
+
+    const closeLoginModal = () => {
+      showLoginModal.value = false;
+    };
+
+    const handleLoginSuccess = () => {
+      closeLoginModal();
+      // 可以在这里添加登录成功后的其他操作
+    };
+
+    onMounted(async () => {
+      // 检查是否有保存的登录状态
+      await authStore.checkAuth();
+    });
 
     return {
       chatHistory,
       currentChatId,
       currentMessages,
       isStreaming,
+      showLoginModal,
       handleNewChat,
       handleSelectChat,
       handleSendMessage,
       handleStopStream,
-      handleUploadFile
+      handleUploadFile,
+      closeLoginModal,
+      handleLoginSuccess
     };
   }
 };

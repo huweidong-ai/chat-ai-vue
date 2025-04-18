@@ -1,56 +1,52 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router';
-import { isAuthenticated } from '@/services/authService';
-import Login from '../views/Login.vue';
-import Register from '../views/Register.vue';
-import Upload from '../views/Upload.vue';
-import ChatLayout from '../components/chat/ChatLayout.vue';
+import { useAuthStore } from '@/store/modules/auth';
 
 const routes = [
     {
         path: '/',
-        redirect: '/login'
-    },
-    {
-        path: '/login',
-        name: 'Login',
-        component: Login
-    },
-    {
-        path: '/register',
-        name: 'Register',
-        component: Register
-    },
-    {
-        path: '/upload',
-        name: 'Upload',
-        component: Upload,
-        meta: { requiresAuth: true }
+        redirect: '/chat'
     },
     {
         path: '/chat',
         name: 'Chat',
-        component: ChatLayout,
-        meta: { requiresAuth: true }
+        component: () => import('@/components/chat/ChatLayout.vue')
+    },
+    {
+        path: '/login',
+        name: 'Login',
+        component: () => import('@/views/Login.vue')
     }
 ];
 
 const router = createRouter({
-    history: createWebHistory(process.env.BASE_URL),
+    history: createWebHistory(),
     routes
 });
 
-// 添加全局路由守卫
-router.beforeEach((to, from, next) => {
+// 全局路由守卫
+router.beforeEach(async (to, from, next) => {
+    const authStore = useAuthStore();
+    
+    // 如果路由需要认证
     if (to.matched.some(record => record.meta.requiresAuth)) {
-        if (!isAuthenticated()) {
-            next('/login');
-        } else {
-            next();
+        // 检查是否已登录
+        if (!authStore.isLoggedIn) {
+            // 如果没有登录，先尝试恢复登录状态
+            const isAuthenticated = await authStore.checkAuth();
+            
+            if (!isAuthenticated) {
+                // 如果仍未登录，重定向到登录页
+                next({
+                    path: '/login',
+                    query: { redirect: to.fullPath }
+                });
+                return;
+            }
         }
-    } else {
-        next();
     }
+
+    next();
 });
 
 export default router;

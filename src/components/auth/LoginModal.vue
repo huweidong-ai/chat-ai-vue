@@ -1,12 +1,14 @@
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <div class="branding">
-        <img src="@/assets/logo.png" alt="Logo" class="logo" />
-        <h1>AI助手</h1>
-        <p class="subtitle">智能对话，助您提升效率</p>
+  <div v-if="visible" class="modal-overlay" @click.self="handleClose">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>登录后</h2>
+        <p class="subtitle">有问题，免费聊</p>
+        <button class="close-btn" @click="handleClose">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      
+
       <div class="login-methods">
         <div class="login-section">
           <h3>微信扫码登录</h3>
@@ -78,16 +80,19 @@
 
 <script>
 import { ref, computed } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useAuthStore } from '@/store/modules/auth';
+import { useStore } from 'vuex';
 
 export default {
-  name: 'LoginView',
-  setup() {
-    const router = useRouter();
-    const route = useRoute();
-    const authStore = useAuthStore();
-    
+  name: 'LoginModal',
+  props: {
+    visible: {
+      type: Boolean,
+      default: false
+    }
+  },
+  emits: ['close', 'login-success'],
+  setup(props, { emit }) {
+    const store = useStore();
     const phone = ref('');
     const verificationCode = ref('');
     const agreeToTerms = ref(false);
@@ -114,7 +119,8 @@ export default {
       if (!canSendCode.value) return;
       
       try {
-        await authStore.sendVerificationCode(phone.value);
+        // TODO: 调用发送验证码API
+        await store.dispatch('auth/sendVerificationCode', phone.value);
         
         // 开始倒计时
         countdown.value = 60;
@@ -135,14 +141,12 @@ export default {
       if (!canLogin.value) return;
 
       try {
-        await authStore.login({
+        await store.dispatch('auth/login', {
           phone: phone.value,
           code: verificationCode.value
         });
-        
-        // 登录成功后跳转
-        const redirectPath = route.query.redirect || '/chat';
-        router.push(redirectPath);
+        emit('login-success');
+        handleClose();
       } catch (error) {
         console.error('登录失败:', error);
         // TODO: 显示错误提示
@@ -155,6 +159,11 @@ export default {
       console.log('Show terms:', type);
     };
 
+    // 关闭弹窗
+    const handleClose = () => {
+      emit('close');
+    };
+
     return {
       phone,
       verificationCode,
@@ -165,53 +174,64 @@ export default {
       canLogin,
       sendVerificationCode,
       handleLogin,
-      showTerms
+      showTerms,
+      handleClose
     };
   }
 };
 </script>
 
 <style scoped>
-.login-page {
-  min-height: 100vh;
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f9fafb;
-  padding: 20px;
+  z-index: 1000;
 }
 
-.login-container {
+.modal-content {
   background: white;
   border-radius: 12px;
-  padding: 40px;
+  padding: 24px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
 }
 
-.branding {
+.modal-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
 }
 
-.logo {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-}
-
-.branding h1 {
+.modal-header h2 {
   font-size: 24px;
   font-weight: 600;
-  color: #333;
   margin: 0;
+  color: #333;
 }
 
 .subtitle {
   font-size: 16px;
   color: #666;
   margin: 8px 0 0 0;
+}
+
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
 }
 
 .login-methods {
@@ -408,4 +428,4 @@ export default {
 .terms-text a:hover {
   text-decoration: underline;
 }
-</style>
+</style> 

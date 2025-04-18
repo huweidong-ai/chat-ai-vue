@@ -17,7 +17,7 @@
       <ul class="message-list">
         <li v-for="(msg, index) in messages" :key="index" :class="['message', msg.type]">
           <div class="avatar">
-            <img v-if="msg.type === 'AI'" src="@/assets/ai-avatar.png" alt="AI" />
+            <img v-if="msg.type === 'AI'" src="../../assets/ai-avatar.png" alt="AI" />
             <span v-else>{{ msg.type === 'Me' ? '我' : (msg.type === 'system' ? '系统' : 'AI') }}</span>
           </div>
           <div class="message-wrapper">
@@ -105,7 +105,6 @@ import shell from 'highlight.js/lib/languages/shell';
 import sql from 'highlight.js/lib/languages/sql';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import 'highlight.js/styles/atom-one-dark.css';
-import '@fortawesome/fontawesome-free/css/all.min.css';
 
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('python', python);
