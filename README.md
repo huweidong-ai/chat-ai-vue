@@ -36,7 +36,7 @@ my-vue-project/
 │   ├── router/         # 路由配置
 │   │   └── index.js    # 路由配置（映射 views 中的组件）
 │   ├── services/       # 服务层（处理业务逻辑）
-│   │   └── DialogService.js
+│   │   └── topicService.js
 │   ├── views/          # 页面级组件（路由直接指向的）
 │   │   └── Login.vue   # 登录页（完整业务场景）
 │   │   └── Upload.vue  # 上传页（完整业务场景）

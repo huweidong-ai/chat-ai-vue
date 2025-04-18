@@ -1,14 +1,14 @@
 <template>
   <div class="conversation-list">
-    <h2>对话列表</h2>
-    <button @click="navigateToNewChat" class="new-dialog-btn">新建对话</button>
+    <h2>主题列表</h2>
+    <button @click="navigateToNewChat" class="new-topic-btn">新建对话</button>
     <ul>
       <li
-          v-for="dialog in dialogs"
-          :key="dialog.id"
-          @click="selectDialog(dialog.id)"
-          :class="['dialog-item', selectedDialogId === dialog.id ? 'selected' : '']">
-        {{ dialog.title }} - {{ formatDate(dialog.createdAt) }}
+          v-for="topic in topics"
+          :key="topic.id"
+          @click="selectDialog(topic.id)"
+          :class="['topic-item', selectedDialogId === topic.id ? 'selected' : '']">
+        {{ topic.title }} - {{ formatDate(topic.createdAt) }}
       </li>
     </ul>
   </div>
@@ -16,20 +16,20 @@
 
 <script>
 import { ref } from 'vue';
-import DialogService from '@/services/DialogService';
+import topicService from '@/services/topicService';
 
 export default {
   name: 'ConversationList',
-  emits: ['select-dialog', 'new-chat'],
+  emits: ['select-topic', 'new-chat'],
   setup(props, { emit }) {
-    const dialogs = ref([]);
+    const topics = ref([]);
     const selectedDialogId = ref(null);
 
-    const loadDialogs = () => {
-      dialogs.value = DialogService.getAllDialogs();
-      if (dialogs.value.length > 0) {
-        selectedDialogId.value = dialogs.value[0].id;
-        emit('select-dialog', selectedDialogId.value);
+    const loadTopics = () => {
+      topics.value = topicService.getAllTopics();
+      if (topics.value.length > 0) {
+        selectedDialogId.value = topics.value[0].id;
+        emit('select-topic', selectedDialogId.value);
       }
     };
 
@@ -41,7 +41,7 @@ export default {
     const selectDialog = (id) => {
       if (selectedDialogId.value !== id) {
         selectedDialogId.value = parseInt(id);
-        emit('select-dialog', selectedDialogId.value);
+        emit('select-topic', selectedDialogId.value);
       }
     };
 
@@ -49,10 +49,10 @@ export default {
       return new Date(date).toLocaleString();
     };
 
-    loadDialogs();
+    loadTopics();
 
     return {
-      dialogs,
+      topics,
       selectedDialogId,
       navigateToNewChat,
       selectDialog,
@@ -71,7 +71,7 @@ export default {
   background-color: #f5f7fa;
 }
 
-.new-dialog-btn {
+.new-topic-btn {
   margin-bottom: 1rem;
   padding: 12px 20px;
   border: none;
@@ -84,11 +84,11 @@ export default {
   transition: background-color 0.3s;
 }
 
-.new-dialog-btn:hover {
+.new-topic-btn:hover {
   background-color: #66b1ff;
 }
 
-.dialog-item {
+.topic-item {
   padding: 12px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -98,12 +98,12 @@ export default {
   background-color: #fff;
 }
 
-.dialog-item:hover {
+.topic-item:hover {
   background-color: #f5f7fa;
   border-color: #409eff;
 }
 
-.dialog-item.selected {
+.topic-item.selected {
   background-color: #ecf5ff;
   border-color: #409eff;
   color: #409eff;

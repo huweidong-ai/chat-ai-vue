@@ -18,7 +18,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import DialogService from '@/services/DialogService';
+import topicService from '@/services/topicService';
 import { chatService } from '@/services/chatService';
 import ConversationList from './chat/ConversationList.vue';
 import ChatWindow from './chat/ChatWindow.vue';
@@ -38,8 +38,8 @@ export default {
     const sseIdsMap = ref({});
     const isStreamingMap = ref({});
 
-    const loadDialogs = () => {
-      dialogs.value = DialogService.getAllDialogs();
+    const loadTopics = () => {
+      dialogs.value = topicService.getAllTopics();
       if (dialogs.value.length > 0) {
         selectedDialogId.value = dialogs.value[0].id;
       }
@@ -60,22 +60,24 @@ export default {
         if (typeof messageText !== 'string') {
           messageText = messageText.content;
         }
-        let newDialogTitle = messageText.substring(0, 20);
-        if (newDialogTitle.length < messageText.length) {
-          newDialogTitle += '...';
+        let newTopicTitle = messageText.substring(0, 20);
+        if (newTopicTitle.length < messageText.length) {
+          newTopicTitle += '...';
         }
 
-        const newDialog = DialogService.createDialog(newDialogTitle, [{ content: messageText, type: 'Me' }]);
-        dialogs.value.unshift(newDialog);
-        selectedDialogId.value = newDialog.id;
-
+        const newTopic = topicService.createTopic(newTopicTitle, [{ content: messageText, type: 'Me' }]);
+        dialogs.value.unshift(newTopic);
+        selectedDialogId.value = newTopic.id;
+    
         const data = { question: messageText, userId: '123' };
+        console.log('新对话发送数据:', data);
         startEventSource(data);
-
+    
         addMessage({ content: messageText, type: 'Me' });
       } else {
         addMessage({ content: messageText, type: 'Me' });
         const data = { question: messageText, userId: '123' };
+        console.log('已有对话发送数据:', data);
         startEventSource(data);
       }
     };
@@ -87,6 +89,7 @@ export default {
         return;
       }
     
+      console.log('开始SSE连接，发送数据:', data);
       const controller = new AbortController();
       controllersMap.value[dialogId] = controller;
     
@@ -246,14 +249,14 @@ export default {
 
     watch(selectedDialogId, (newId) => {
       if (newId !== null) {
-        selectedDialog.value = DialogService.getDialogById(newId);
+        selectedDialog.value = topicService.getTopicById(newId);
       } else {
         selectedDialog.value = null;
       }
     });
 
     onMounted(() => {
-      loadDialogs();
+      loadTopics();
     });
 
     onUnmounted(() => {

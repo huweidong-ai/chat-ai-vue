@@ -128,10 +128,13 @@ export default {
       if (props.isStreaming) {
         emit('stop-stream');
       } else if (message.value.trim()) {
+        console.log('输入框内容类型:', typeof message.value);
+        console.log('输入框内容:', message.value);
         const messageData = {
           content: message.value,
           mode: isDeepThinking.value ? 'deep_thinking' : (isWebSearch.value ? 'web_search' : 'normal')
         };
+        console.log('发送的消息数据:', messageData);
         emit('send-message', messageData);
         message.value = '';
         autoGrow();
@@ -143,7 +146,15 @@ export default {
     };
 
     const renderMarkdown = (content) => {
-      return renderer.parse(content || '');
+      if (content === null || content === undefined) {
+        console.error('Content is null or undefined');
+        return '';
+      }
+      if (typeof content === 'object' && content.content) {
+        content = content.content;
+      }
+      const strContent = typeof content === 'object' ? JSON.stringify(content) : String(content);
+      return renderer.parse(strContent);
     };
 
     const chatHeaderTitle = computed(() => {
