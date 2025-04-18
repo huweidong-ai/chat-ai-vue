@@ -38,11 +38,6 @@
           ref="messageInput"
           @input="autoGrow"
         ></textarea>
-        <div class="input-tools">
-          <button class="tool-btn" title="清空输入" @click="clearMessage">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
         <button @click="uploadFile" class="upload-btn" title="支持上传文件(最多 50个，每个 100 MB)接受 pdf、docx、xlsx、pptx、txt、png、jpeg等">+</button>
         <button 
           @click="sendMessageOrStop"
@@ -343,11 +338,6 @@ export default {
 
 .upload-btn:hover {
   background-color: #66b1ff;
-}
-
-.input-tools {
-  display: flex;
-  gap: 8px;
 }
 
 .tool-btn {
