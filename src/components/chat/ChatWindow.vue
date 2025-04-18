@@ -191,9 +191,9 @@ export default {
         }
         const strContent = typeof content === 'object' ? JSON.stringify(content) : String(content);
         // 添加内容长度限制，防止堆栈溢出
-        if (strContent.length > 50000) {
+        if (strContent.length > 10000) {
           console.warn('Content too long, truncating...');
-          return `${strContent.substring(0, 50000)}... (内容过长已截断)`;
+          return `${strContent.substring(0, 10000)}... (内容过长已截断)`;
         }
         // 预处理内容，移除可能导致解析问题的特殊字符
         const sanitizedContent = strContent

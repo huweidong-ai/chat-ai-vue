@@ -142,7 +142,7 @@ export default {
         
         // 登录成功后跳转
         const redirectPath = route.query.redirect || '/chat';
-        router.push(redirectPath);
+        await router.push(redirectPath);
       } catch (error) {
         console.error('登录失败:', error);
         // TODO: 显示错误提示

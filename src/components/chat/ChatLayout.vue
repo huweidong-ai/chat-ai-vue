@@ -119,7 +119,7 @@ export default {
     };
 
     const handleUploadFile = () => {
-      if (!checkAuth()) return;
+      // if (!checkAuth()) return;
       // TODO: 实现文件上传逻辑
       console.log('File upload triggered');
     };

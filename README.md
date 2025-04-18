@@ -39,7 +39,6 @@ my-vue-project/
 │   │   └── topicService.js
 │   ├── views/          # 页面级组件（路由直接指向的）
 │   │   └── Login.vue   # 登录页（完整业务场景）
-│   │   └── Upload.vue  # 上传页（完整业务场景）
 │   ├── App.vue
 │   └── main.js
 ├── .env.development    # 环境变量配置
