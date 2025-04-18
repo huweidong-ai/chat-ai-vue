@@ -39,7 +39,7 @@
           @input="autoGrow"
         ></textarea>
         <button @click="uploadFile" class="upload-btn" title="支持上传文件(最多 50个，每个 100 MB)接受 pdf、docx、xlsx、pptx、txt、png、jpeg等">+</button>
-        <button 
+        <button
           @click="sendMessageOrStop"
           :class="['send-btn', isStreaming ? 'stop' : '']">
           {{ isStreaming ? '停止' : '发送' }}
@@ -141,15 +141,29 @@ export default {
     };
 
     const renderMarkdown = (content) => {
-      if (content === null || content === undefined) {
-        console.error('Content is null or undefined');
-        return '';
+      try {
+        if (content === null || content === undefined) {
+          console.error('Content is null or undefined');
+          return '';
+        }
+        if (typeof content === 'object' && content.content) {
+          content = content.content;
+        }
+        const strContent = typeof content === 'object' ? JSON.stringify(content) : String(content);
+        // 添加内容长度限制，防止堆栈溢出
+        if (strContent.length > 50000) {
+          console.warn('Content too long, truncating...');
+          return `${strContent.substring(0, 50000)}... (内容过长已截断)`;
+        }
+        // 预处理内容，移除可能导致解析问题的特殊字符
+        const sanitizedContent = strContent
+          .replace(/^\s*[#\-*]\s*$/gm, '') // 移除只包含标记符号的空行
+          .replace(/([\r\n])\1{3,}/g, '$1$1'); // 限制连续换行
+        return renderer.parse(sanitizedContent);
+      } catch (error) {
+        console.error('Markdown rendering error:', error);
+        return '内容渲染失败，请查看原始文本';
       }
-      if (typeof content === 'object' && content.content) {
-        content = content.content;
-      }
-      const strContent = typeof content === 'object' ? JSON.stringify(content) : String(content);
-      return renderer.parse(strContent);
     };
 
     const chatHeaderTitle = computed(() => {
@@ -181,210 +195,211 @@ export default {
 
 <style scoped>
 .chat-container {
-  width: 70%;
-  padding: 20px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .chat-header {
-  background-color: #007BFF;
-  color: white;
-  padding: 12px 20px;
-  text-align: center;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  padding: 16px 24px;
+  background-color: #fff;
+  border-bottom: 1px solid #e6e6e6;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.chat-header h3 {
+  margin: 0;
   font-size: 16px;
+  font-weight: 600;
+  color: #333;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .chat-body {
-  flex-grow: 1;
-  min-height: 200px;
-  max-height: calc(100vh - 300px);
+  flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
+  padding: 24px;
+  scroll-behavior: smooth;
 }
 
 .message-list {
-  list-style-type: none;
+  list-style: none;
   padding: 0;
-  margin: 0;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .message {
-  margin-bottom: 16px;
   display: flex;
   align-items: flex-start;
-  padding: 12px;
-  border-radius: 4px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  margin-bottom: 24px;
+  animation: fadeIn 0.3s ease;
 }
 
-.message.Me {
-  justify-content: flex-end;
-}
-
-.message.AI {
-  justify-content: flex-start;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .avatar {
-  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: #6366f1;
+  color: white;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #409eff;
-  color: white;
-  font-size: 14px;
   margin-right: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.message.Me .avatar {
+  background-color: #10b981;
+}
+
+.message.system .avatar {
+  background-color: #6b7280;
 }
 
 .message-content {
-  max-width: 70%;
-  padding: 12px;
-  border-radius: 4px;
-  background-color: #ecf5ff;
-  text-align: left;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  white-space: pre-line;
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+  padding: 16px;
+  background-color: #f3f4f6;
+  border-radius: 12px;
   font-size: 14px;
-  line-height: 1.5;
-  color: #303133;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #374151;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.message.Me .message-content {
+  background-color: #ede9fe;
+  color: #5b21b6;
 }
 
 .chat-footer {
-  margin-top: 20px;
+  padding: 20px 24px;
+  background-color: #fff;
+  border-top: 1px solid #e6e6e6;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
 }
 
 .function-buttons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .function-btn {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid #dcdfe6;
-  border-radius: 20px;
-  background: white;
-  color: #606266;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-weight: bold;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .function-btn:hover {
-  border-color: #409eff;
-  color: #409eff;
-}
-
-.function-btn.active {
-  background: #ecf5ff;
-  border-color: #409eff;
-  color: #409eff;
+  border-color: #6366f1;
+  color: #6366f1;
+  transform: translateY(-1px);
 }
 
 .message-input-wrapper {
   position: relative;
   display: flex;
-  flex-direction: column;
-  background-color: white;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 10px;
-  min-height: 120px;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .message-input {
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   resize: none;
-  min-height: 24px;
+  min-height: 48px;
   max-height: 200px;
   font-size: 14px;
-  line-height: 1.5;
-  padding: 4px 0;
-  margin-bottom: 30px;
+  line-height: 1.6;
+  transition: all 0.2s ease;
+  background-color: #f9fafb;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  background-color: #fff;
 }
 
 .upload-btn {
-  padding: 6px 12px;
-  border: none;
-  background-color: #409eff;
-  color: white;
-  border-radius: 4px;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background-color: #fff;
+  color: #4b5563;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  line-height: 1;
+  height: 48px;
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-btn:hover {
-  background-color: #66b1ff;
-}
-
-.tool-btn {
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  cursor: pointer;
-  color: #606266;
-  transition: color 0.3s;
-}
-
-.tool-btn:hover {
-  color: #409eff;
+  border-color: #6366f1;
+  color: #6366f1;
+  transform: translateY(-1px);
 }
 
 .send-btn {
-  position: absolute;
-  right: 12px;
-  bottom: 10px;
-  padding: 8px 20px;
+  padding: 12px 24px;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  background-color: #409eff;
+  border-radius: 10px;
+  background-color: #6366f1;
   color: white;
-  transition: all 0.3s;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  height: 48px;
+  min-width: 100px;
 }
 
 .send-btn:hover {
-  background-color: #66b1ff;
-}
-
-.send-btn.stop {
-  background-color: #f56c6c;
-}
-
-.send-btn.stop:hover {
-  background-color: #f78989;
+  background-color: #4f46e5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .disclaimer {
   margin-top: 16px;
   font-size: 12px;
-  color: #909399;
+  color: #6b7280;
   text-align: center;
-  line-height: 1.4;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
 }
 
 .upload-btn {

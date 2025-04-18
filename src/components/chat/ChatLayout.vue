@@ -283,10 +283,19 @@ export default {
 <style scoped>
 .container {
   display: flex;
-  height: calc(100vh - 60px);
+  height: 100vh;
+  background-color: #f9fafb;
+}
+
+.container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
   background-color: #fff;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  margin: 20px;
+  border-bottom: 1px solid #e6e6e6;
+  z-index: 10;
 }
 </style>
