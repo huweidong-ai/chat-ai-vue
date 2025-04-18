@@ -38,6 +38,7 @@ export const chatService = {
       onerror(error) {
         console.error('SSE连接错误:', error);
         if (onerror) onerror(error);
+        throw new Error("请求失败，停止重试");
       }
     });
   },
