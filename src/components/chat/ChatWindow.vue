@@ -1,49 +1,90 @@
 <template>
   <div class="chat-container">
     <header class="chat-header">
-      <h3>{{ chatHeaderTitle }}</h3>
+      <div class="header-left">
+        <h3>{{ chatHeaderTitle }}</h3>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" title="复制对话">
+          <i class="fas fa-copy"></i>
+        </button>
+        <button class="icon-btn" title="导出对话">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
     </header>
     <main class="chat-body">
       <ul class="message-list">
         <li v-for="(msg, index) in messages" :key="index" :class="['message', msg.type]">
           <div class="avatar">
-            <span>{{ msg.type === 'Me' ? '我' : (msg.type === 'system' ? '系统' : 'AI') }}</span>
+            <img v-if="msg.type === 'AI'" src="@/assets/ai-avatar.png" alt="AI" />
+            <span v-else>{{ msg.type === 'Me' ? '我' : (msg.type === 'system' ? '系统' : 'AI') }}</span>
           </div>
-          <span v-if="msg.type === 'system'" class="message-content">{{ msg.content }}</span>
-          <span v-else v-html="renderMarkdown(msg.content)" class="message-content"></span>
+          <div class="message-wrapper">
+            <div class="message-header">
+              <span class="sender-name">{{ msg.type === 'Me' ? '我' : (msg.type === 'system' ? '系统' : 'AI助手') }}</span>
+              <span class="message-time">{{ msg.timestamp || '刚刚' }}</span>
+            </div>
+            <div v-if="msg.type === 'system'" class="message-content system">{{ msg.content }}</div>
+            <div v-else v-html="renderMarkdown(msg.content)" class="message-content"></div>
+            <div class="message-actions" v-if="msg.type === 'AI'">
+              <button class="action-btn" title="复制">
+                <i class="fas fa-copy"></i>
+              </button>
+              <button class="action-btn" title="点赞">
+                <i class="fas fa-thumbs-up"></i>
+              </button>
+              <button class="action-btn" title="点踩">
+                <i class="fas fa-thumbs-down"></i>
+              </button>
+            </div>
+          </div>
         </li>
       </ul>
     </main>
     <footer class="chat-footer">
-      <div class="function-buttons">
-        <button 
-          @click="toggleDeepThinking" 
-          :class="['function-btn', isDeepThinking ? 'active' : '']">
-          <i class="fas fa-brain"></i>
-          深度思考
-        </button>
-        <button 
-          @click="toggleWebSearch" 
-          :class="['function-btn', isWebSearch ? 'active' : '']">
-          <i class="fas fa-search"></i>
-          联网搜索
-        </button>
+      <div class="tools-section">
+        <div class="tools-group">
+          <button class="tool-btn" title="深度思考">
+            <i class="fas fa-brain"></i>
+            深度思考
+          </button>
+          <button class="tool-btn" title="联网搜索">
+            <i class="fas fa-search"></i>
+            联网搜索
+          </button>
+          <button class="tool-btn" title="PPT制作">
+            <i class="fas fa-file-powerpoint"></i>
+            PPT制作
+          </button>
+        </div>
       </div>
       <div class="message-input-wrapper">
+        <div class="input-tools">
+          <button class="tool-btn" @click="uploadFile" title="上传文件">
+            <i class="fas fa-paperclip"></i>
+          </button>
+          <button class="tool-btn" title="插入图片">
+            <i class="fas fa-image"></i>
+          </button>
+        </div>
         <textarea
           v-model="message"
           @keydown.enter.prevent="sendMessageOrStop"
-          placeholder="输入消息..."
+          placeholder="输入消息，Enter 发送，Shift + Enter 换行..."
           class="message-input"
           ref="messageInput"
           @input="autoGrow"
         ></textarea>
-        <button @click="uploadFile" class="upload-btn" title="支持上传文件(最多 50个，每个 100 MB)接受 pdf、docx、xlsx、pptx、txt、png、jpeg等">+</button>
-        <button
-          @click="sendMessageOrStop"
-          :class="['send-btn', isStreaming ? 'stop' : '']">
-          {{ isStreaming ? '停止' : '发送' }}
-        </button>
+        <div class="input-actions">
+          <span class="char-count">{{ message.length }}/10000</span>
+          <button
+            @click="sendMessageOrStop"
+            :class="['send-btn', isStreaming ? 'stop' : '']">
+            {{ isStreaming ? '停止' : '发送' }}
+            <i class="fas" :class="isStreaming ? 'fa-stop' : 'fa-paper-plane'"></i>
+          </button>
+        </div>
       </div>
       <div class="disclaimer">
         所有产出内容均源自人工智能模型，其内容的精确度和全面性不能确保，不反映我们的立场或看法。
@@ -200,6 +241,7 @@ export default {
   flex-direction: column;
   background-color: #fff;
   position: relative;
+  height: 100vh;
 }
 
 .chat-header {
@@ -209,14 +251,29 @@ export default {
   position: sticky;
   top: 0;
   z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.chat-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+.header-right {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #666;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.icon-btn:hover {
+  background-color: #f5f5f5;
   color: #333;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .chat-body {
@@ -224,6 +281,7 @@ export default {
   overflow-y: auto;
   padding: 24px;
   scroll-behavior: smooth;
+  background-color: #f9f9f9;
 }
 
 .message-list {
@@ -240,183 +298,181 @@ export default {
   animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.message-wrapper {
+  flex: 1;
+  margin-left: 12px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background-color: #6366f1;
-  color: white;
+.message.Me .message-wrapper {
+  background: #e3f2fd;
+}
+
+.message-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  margin-right: 12px;
+  margin-bottom: 8px;
   font-size: 14px;
+}
+
+.sender-name {
   font-weight: 500;
+  color: #333;
 }
 
-.message.Me .avatar {
-  background-color: #10b981;
-}
-
-.message.system .avatar {
-  background-color: #6b7280;
+.message-time {
+  color: #999;
+  font-size: 12px;
 }
 
 .message-content {
-  flex: 1;
-  padding: 16px;
-  background-color: #f3f4f6;
-  border-radius: 12px;
   font-size: 14px;
   line-height: 1.6;
+  color: #333;
   white-space: pre-wrap;
-  word-break: break-word;
-  color: #374151;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.message.Me .message-content {
-  background-color: #ede9fe;
-  color: #5b21b6;
+.message-content.system {
+  color: #666;
+  font-style: italic;
 }
 
-.chat-footer {
-  padding: 20px 24px;
-  background-color: #fff;
-  border-top: 1px solid #e6e6e6;
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-}
-
-.function-buttons {
+.message-actions {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
 }
 
-.function-btn {
-  padding: 8px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #fff;
-  color: #4b5563;
+.action-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  color: #666;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.action-btn:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.tools-section {
+  padding: 8px 24px;
+  border-top: 1px solid #e6e6e6;
+}
+
+.tools-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tool-btn {
+  background: none;
+  border: 1px solid #e6e6e6;
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  color: #666;
+  font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 4px;
+  transition: all 0.3s;
 }
 
-.function-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-  transform: translateY(-1px);
+.tool-btn:hover {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+}
+
+.tool-btn i {
+  font-size: 14px;
 }
 
 .message-input-wrapper {
-  position: relative;
+  margin: 16px 24px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.input-tools {
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .message-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  resize: none;
-  min-height: 48px;
+  width: 100%;
+  min-height: 60px;
   max-height: 200px;
+  padding: 12px;
+  border: none;
+  resize: none;
+  outline: none;
   font-size: 14px;
   line-height: 1.6;
-  transition: all 0.2s ease;
-  background-color: #f9fafb;
 }
 
-.message-input:focus {
-  outline: none;
-  border-color: #6366f1;
-  background-color: #fff;
-}
-
-.upload-btn {
-  padding: 12px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  background-color: #fff;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 18px;
-  line-height: 1;
-  height: 48px;
-  width: 48px;
+.input-actions {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  padding: 8px;
+  border-top: 1px solid #e6e6e6;
 }
 
-.upload-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-  transform: translateY(-1px);
+.char-count {
+  color: #999;
+  font-size: 12px;
 }
 
 .send-btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 10px;
-  background-color: #6366f1;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 14px;
-  font-weight: 500;
-  height: 48px;
-  min-width: 100px;
-}
-
-.send-btn:hover {
   background-color: #4f46e5;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.disclaimer {
-  margin-top: 16px;
-  font-size: 12px;
-  color: #6b7280;
-  text-align: center;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.5;
-}
-
-.upload-btn {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  background-color: #409eff;
   color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
   transition: all 0.3s;
 }
 
-.upload-btn:hover {
-  background-color: #66b1ff;
+.send-btn:hover {
+  background-color: #4338ca;
+}
+
+.send-btn.stop {
+  background-color: #ef4444;
+}
+
+.send-btn.stop:hover {
+  background-color: #dc2626;
+}
+
+.disclaimer {
+  padding: 12px 24px;
+  color: #666;
+  font-size: 12px;
+  text-align: center;
+  border-top: 1px solid #e6e6e6;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
