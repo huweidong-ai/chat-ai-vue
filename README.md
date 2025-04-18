@@ -30,7 +30,7 @@ my-vue-project/
 ├── src/
 │   ├── assets/     # 静态资源（这里的文件会被编译成 URL）
 │   ├── components/ # 可复用组件
-│   │   └── ConversationListAndChat.vue # 可复用的聊天组件
+│   │   └── ChatLayout.vue # 可复用的聊天组件
 │   ├── config/
 │   │   └── constant.js  # API 配置（包括接口地址、请求方法等）
 │   ├── router/         # 路由配置

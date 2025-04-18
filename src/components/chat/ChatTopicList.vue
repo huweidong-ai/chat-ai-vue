@@ -1,13 +1,13 @@
 <template>
-  <div class="conversation-list">
+  <div class="chat-topic-list">
     <h2>主题列表</h2>
     <button @click="navigateToNewChat" class="new-topic-btn">新建对话</button>
     <ul>
       <li
           v-for="topic in topics"
           :key="topic.id"
-          @click="selectDialog(topic.id)"
-          :class="['topic-item', selectedDialogId === topic.id ? 'selected' : '']">
+          @click="selectTopic(topic.id)"
+          :class="['topic-item', selectedTopicId === topic.id ? 'selected' : '']">
         {{ topic.title }} - {{ formatDate(topic.createdAt) }}
       </li>
     </ul>
@@ -19,29 +19,29 @@ import { ref } from 'vue';
 import topicService from '@/services/topicService';
 
 export default {
-  name: 'ConversationList',
+  name: 'ChatTopicList',
   emits: ['select-topic', 'new-chat'],
   setup(props, { emit }) {
     const topics = ref([]);
-    const selectedDialogId = ref(null);
+    const selectedTopicId = ref(null);
 
     const loadTopics = () => {
       topics.value = topicService.getAllTopics();
       if (topics.value.length > 0) {
-        selectedDialogId.value = topics.value[0].id;
-        emit('select-topic', selectedDialogId.value);
+        selectedTopicId.value = topics.value[0].id;
+        emit('select-topic', selectedTopicId.value);
       }
     };
 
     const navigateToNewChat = () => {
-      selectedDialogId.value = null;
+      selectedTopicId.value = null;
       emit('new-chat');
     };
 
-    const selectDialog = (id) => {
-      if (selectedDialogId.value !== id) {
-        selectedDialogId.value = parseInt(id);
-        emit('select-topic', selectedDialogId.value);
+    const selectTopic = (id) => {
+      if (selectedTopicId.value !== id) {
+        selectedTopicId.value = parseInt(id);
+        emit('select-topic', selectedTopicId.value);
       }
     };
 
@@ -53,9 +53,9 @@ export default {
 
     return {
       topics,
-      selectedDialogId,
+      selectedTopicId,
       navigateToNewChat,
-      selectDialog,
+      selectTopic,
       formatDate
     };
   }
@@ -63,7 +63,7 @@ export default {
 </script>
 
 <style scoped>
-.conversation-list {
+.chat-topic-list {
   width: 30%;
   padding: 20px;
   border-right: 1px solid #dcdfe6;

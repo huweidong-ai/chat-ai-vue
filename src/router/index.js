@@ -4,7 +4,7 @@ import { isAuthenticated } from '@/services/authService';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
 import Upload from '../views/Upload.vue';
-import ConversationListAndChat from '../components/ConversationListAndChat.vue';
+import ChatLayout from '../components/chat/ChatLayout.vue';
 
 const routes = [
     {
@@ -30,7 +30,7 @@ const routes = [
     {
         path: '/chat',
         name: 'Chat',
-        component: ConversationListAndChat,
+        component: ChatLayout,
         meta: { requiresAuth: true }
     }
 ];

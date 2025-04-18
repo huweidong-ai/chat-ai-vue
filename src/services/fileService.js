@@ -42,6 +42,6 @@ export const uploadFile = async (file, isPreview = false) => {
 };
 
 // 上传对话文件
-export const uploadDialogueFile = async (file) => {
+export const uploadTopicueFile = async (file) => {
   return uploadFile(file, false);
 };

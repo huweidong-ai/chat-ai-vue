@@ -1,14 +1,14 @@
 <template>
   <div class="container">
-    <ConversationList
-      :dialogs="dialogs"
-      :selectedDialogId="selectedDialogId"
-      @select-dialog="selectDialog"
+    <ChatTopicList
+      :topics="topics"
+      :selectedTopicId="selectedTopicId"
+      @select-topic="selectTopic"
       @new-chat="navigateToNewChat"
     />
     <ChatWindow
       :messages="messagesToShow"
-      :isStreaming="isCurrentDialogStreaming"
+      :isStreaming="isCurrentTopicStreaming"
       @send-message="handleSendMessage"
       @stop-stream="stopStream"
       @upload-file="handleUploadFile"
@@ -20,43 +20,43 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import topicService from '@/services/topicService';
 import { chatService } from '@/services/chatService';
-import ConversationList from './chat/ConversationList.vue';
-import ChatWindow from './chat/ChatWindow.vue';
+import ChatTopicList from './ChatTopicList.vue';
+import ChatWindow from './ChatWindow.vue';
 
 export default {
-  name: 'ConversationListAndChat',
+  name: 'ChatLayout',
   components: {
-    ConversationList,
+    ChatTopicList,
     ChatWindow
   },
   setup() {
-    const dialogs = ref([]);
-    const selectedDialogId = ref(null);
-    const selectedDialog = ref(null);
+    const topics = ref([]);
+    const selectedTopicId = ref(null);
+    const selectedTopic = ref(null);
     const controllersMap = ref({});
     const incomingMessagesMap = ref({});
     const sseIdsMap = ref({});
     const isStreamingMap = ref({});
 
     const loadTopics = () => {
-      dialogs.value = topicService.getAllTopics();
-      if (dialogs.value.length > 0) {
-        selectedDialogId.value = dialogs.value[0].id;
+      topics.value = topicService.getAllTopics();
+      if (topics.value.length > 0) {
+        selectedTopicId.value = topics.value[0].id;
       }
     };
 
     const navigateToNewChat = () => {
-      selectedDialogId.value = null;
+      selectedTopicId.value = null;
     };
 
-    const selectDialog = (id) => {
-      if (selectedDialogId.value !== id) {
-        selectedDialogId.value = parseInt(id);
+    const selectTopic = (id) => {
+      if (selectedTopicId.value !== id) {
+        selectedTopicId.value = parseInt(id);
       }
     };
 
     const handleSendMessage = (messageText) => {
-      if (!selectedDialogId.value) {
+      if (!selectedTopicId.value) {
         if (typeof messageText !== 'string') {
           messageText = messageText.content;
         }
@@ -66,8 +66,8 @@ export default {
         }
 
         const newTopic = topicService.createTopic(newTopicTitle, [{ content: messageText, type: 'Me' }]);
-        dialogs.value.unshift(newTopic);
-        selectedDialogId.value = newTopic.id;
+        topics.value.unshift(newTopic);
+        selectedTopicId.value = newTopic.id;
     
         const data = { question: messageText, userId: '123' };
         console.log('新对话发送数据:', data);
@@ -83,20 +83,20 @@ export default {
     };
 
     const startEventSource = (data) => {
-      const dialogId = selectedDialogId.value;
-      if (getDialogIsStreaming(dialogId)) {
+      const topicId = selectedTopicId.value;
+      if (getTopicIsStreaming(topicId)) {
         console.warn('已经在进行对话流，忽略重复请求。');
         return;
       }
     
       console.log('开始SSE连接，发送数据:', data);
       const controller = new AbortController();
-      controllersMap.value[dialogId] = controller;
+      controllersMap.value[topicId] = controller;
     
       chatService.startChatStream(data, {
         onopen(response) {
           if (response.ok && response.headers.get("content-type") === "text/event-stream") {
-            setDialogIsStreaming(dialogId, true);
+            setTopicIsStreaming(topicId, true);
           }
         },
     
@@ -105,34 +105,34 @@ export default {
             const eventData = JSON.parse(event.data);
             if (eventData.code === 200) {
               if (eventData.sseId) {
-                setDialogSseId(dialogId, eventData.sseId);
+                setTopicSseId(topicId, eventData.sseId);
               }
-              let currentIncomingMessage = getDialogIncomingMessage(dialogId);
+              let currentIncomingMessage = getTopicIncomingMessage(topicId);
               if (!currentIncomingMessage) {
                 currentIncomingMessage = { content: '', type: 'AI' };
                 addMessage(currentIncomingMessage);
-                setDialogIncomingMessage(dialogId, currentIncomingMessage);
+                setTopicIncomingMessage(topicId, currentIncomingMessage);
               }
               currentIncomingMessage.content += eventData.answer;
               if (eventData.finish) {
-                setDialogIsStreaming(dialogId, false);
-                setDialogIncomingMessage(dialogId, null);
+                setTopicIsStreaming(topicId, false);
+                setTopicIncomingMessage(topicId, null);
               }
             } else {
               addSystemMessage(`错误: ${eventData.msg}`);
-              closeConnection(dialogId);
+              closeConnection(topicId);
             }
           } catch (e) {
             console.error('解析事件数据失败:', e);
             addSystemMessage('无法解析服务器返回的数据：' + e.message);
-            closeConnection(dialogId);
+            closeConnection(topicId);
           }
         },
     
         onclose() {
-          if (getDialogIsStreaming(dialogId)) {
+          if (getTopicIsStreaming(topicId)) {
             addSystemMessage('连接已关闭');
-            closeConnection(dialogId);
+            closeConnection(topicId);
           }
         },
     
@@ -143,7 +143,7 @@ export default {
           } else {
             addSystemMessage('连接发生错误，请稍后重试');
           }
-          closeConnection(dialogId);
+          closeConnection(topicId);
         },
     
         signal: controller.signal
@@ -151,12 +151,12 @@ export default {
     };
 
     const stopStream = () => {
-      const currentSSEId = getDialogSseId(selectedDialogId.value);
+      const currentSSEId = getTopicSseId(selectedTopicId.value);
       if (currentSSEId) {
         chatService.stopChatStream(currentSSEId)
           .then(() => {
             addSystemMessage('流已停止。');
-            closeConnection(selectedDialogId.value);
+            closeConnection(selectedTopicId.value);
           })
           .catch(error => {
             console.error('Error stopping stream:', error);
@@ -177,7 +177,7 @@ export default {
           formData.append('file', file);
           formData.append('isPreview', false);
 
-          fetch(`/uploadDialogueFile`, {
+          fetch(`/uploadTopicueFile`, {
             method: 'POST',
             body: formData
           })
@@ -194,44 +194,44 @@ export default {
       input.click();
     };
 
-    const closeConnection = (dialogId) => {
-      const controller = controllersMap.value[dialogId];
+    const closeConnection = (topicId) => {
+      const controller = controllersMap.value[topicId];
       if (controller) {
         controller.abort();
       }
-      delete controllersMap.value[dialogId];
-      delete incomingMessagesMap.value[dialogId];
-      delete sseIdsMap.value[dialogId];
-      delete isStreamingMap.value[dialogId];
+      delete controllersMap.value[topicId];
+      delete incomingMessagesMap.value[topicId];
+      delete sseIdsMap.value[topicId];
+      delete isStreamingMap.value[topicId];
     };
 
-    const setDialogIsStreaming = (dialogId, isStreaming) => {
-      isStreamingMap.value[dialogId] = isStreaming;
+    const setTopicIsStreaming = (topicId, isStreaming) => {
+      isStreamingMap.value[topicId] = isStreaming;
     };
 
-    const getDialogIsStreaming = (dialogId) => {
-      return isStreamingMap.value[dialogId] || false;
+    const getTopicIsStreaming = (topicId) => {
+      return isStreamingMap.value[topicId] || false;
     };
 
-    const setDialogSseId = (dialogId, sseId) => {
-      sseIdsMap.value[dialogId] = sseId;
+    const setTopicSseId = (topicId, sseId) => {
+      sseIdsMap.value[topicId] = sseId;
     };
 
-    const getDialogSseId = (dialogId) => {
-      return sseIdsMap.value[dialogId] || null;
+    const getTopicSseId = (topicId) => {
+      return sseIdsMap.value[topicId] || null;
     };
 
-    const setDialogIncomingMessage = (dialogId, message) => {
-      incomingMessagesMap.value[dialogId] = message;
+    const setTopicIncomingMessage = (topicId, message) => {
+      incomingMessagesMap.value[topicId] = message;
     };
 
-    const getDialogIncomingMessage = (dialogId) => {
-      return incomingMessagesMap.value[dialogId] || null;
+    const getTopicIncomingMessage = (topicId) => {
+      return incomingMessagesMap.value[topicId] || null;
     };
 
     const addMessage = (message) => {
-      if (selectedDialog.value) {
-        selectedDialog.value.messages.push(message);
+      if (selectedTopic.value) {
+        selectedTopic.value.messages.push(message);
       }
     };
 
@@ -239,19 +239,19 @@ export default {
       addMessage({ content, type: 'system' });
     };
 
-    const isCurrentDialogStreaming = computed(() => {
-      return getDialogIsStreaming(selectedDialogId.value);
+    const isCurrentTopicStreaming = computed(() => {
+      return getTopicIsStreaming(selectedTopicId.value);
     });
 
     const messagesToShow = computed(() => {
-      return selectedDialog.value ? selectedDialog.value.messages : [];
+      return selectedTopic.value ? selectedTopic.value.messages : [];
     });
 
-    watch(selectedDialogId, (newId) => {
+    watch(selectedTopicId, (newId) => {
       if (newId !== null) {
-        selectedDialog.value = topicService.getTopicById(newId);
+        selectedTopic.value = topicService.getTopicById(newId);
       } else {
-        selectedDialog.value = null;
+        selectedTopic.value = null;
       }
     });
 
@@ -260,17 +260,17 @@ export default {
     });
 
     onUnmounted(() => {
-      Object.keys(controllersMap.value).forEach((dialogId) => {
-        closeConnection(dialogId);
+      Object.keys(controllersMap.value).forEach((topicId) => {
+        closeConnection(topicId);
       });
     });
 
     return {
-      dialogs,
-      selectedDialogId,
+      topics,
+      selectedTopicId,
       messagesToShow,
-      isCurrentDialogStreaming,
-      selectDialog,
+      isCurrentTopicStreaming,
+      selectTopic,
       navigateToNewChat,
       handleSendMessage,
       stopStream,
