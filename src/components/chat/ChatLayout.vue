@@ -1,18 +1,13 @@
 <template>
   <div class="chat-layout">
-    <ChatSidebar
-      :chat-history="chatHistory"
-      :current-chat-id="currentChatId"
-      @new-chat="handleNewChat"
-      @select-chat="handleSelectChat"
-    />
-    <ChatWindow
-      :messages="currentMessages"
-      :is-streaming="isStreaming"
-      @send-message="handleSendMessage"
-      @stop-stream="handleStopStream"
-      @upload-file="handleUploadFile"
-    />
+    <div class="chat-main">
+      <ChatWindow
+        :messages="currentMessages"
+        :is-streaming="isStreaming"
+        @stop-stream="handleStopStream"
+        @send="handleSendMessage"
+      />
+    </div>
     <LoginModal
       v-if="showLoginModal"
       :visible="showLoginModal"
@@ -25,14 +20,12 @@
 <script>
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/store/modules/auth';
-import ChatSidebar from './ChatSidebar.vue';
 import ChatWindow from './ChatWindow.vue';
 import LoginModal from '../auth/LoginModal.vue';
 
 export default {
   name: 'ChatLayout',
   components: {
-    ChatSidebar,
     ChatWindow,
     LoginModal
   },
@@ -71,35 +64,19 @@ export default {
       return true;
     };
 
-    const handleNewChat = () => {
-      if (!checkAuth()) return;
-
-      const newChat = {
-        id: String(Date.now()),
-        title: '新对话',
-        time: '刚刚',
-        messages: []
-      };
-      chatHistory.value.unshift(newChat);
-      currentChatId.value = newChat.id;
-    };
-
-    const handleSelectChat = (chatId) => {
-      if (!checkAuth()) return;
-      currentChatId.value = chatId;
-    };
-
-    const handleSendMessage = (messageData) => {
-      if (!checkAuth()) return;
+    const handleSendMessage = (message) => {
+      if (!checkAuth() || !message.trim()) return;
 
       const chat = chatHistory.value.find(c => c.id === currentChatId.value);
       if (chat) {
+        // 添加用户消息
         chat.messages.push({
           type: 'Me',
-          content: messageData.content,
+          content: message,
           timestamp: new Date().toLocaleTimeString()
         });
-        // TODO: 调用API获取AI响应
+
+        // 模拟AI响应
         isStreaming.value = true;
         setTimeout(() => {
           chat.messages.push({
@@ -113,15 +90,7 @@ export default {
     };
 
     const handleStopStream = () => {
-      if (!checkAuth()) return;
       isStreaming.value = false;
-      // TODO: 实现停止流式响应的逻辑
-    };
-
-    const handleUploadFile = () => {
-      // if (!checkAuth()) return;
-      // TODO: 实现文件上传逻辑
-      console.log('File upload triggered');
     };
 
     const closeLoginModal = () => {
@@ -130,25 +99,18 @@ export default {
 
     const handleLoginSuccess = () => {
       closeLoginModal();
-      // 可以在这里添加登录成功后的其他操作
     };
 
     onMounted(async () => {
-      // 检查是否有保存的登录状态
       await authStore.checkAuth();
     });
 
     return {
-      chatHistory,
-      currentChatId,
       currentMessages,
       isStreaming,
       showLoginModal,
-      handleNewChat,
-      handleSelectChat,
       handleSendMessage,
       handleStopStream,
-      handleUploadFile,
       closeLoginModal,
       handleLoginSuccess
     };
@@ -158,8 +120,15 @@ export default {
 
 <style scoped>
 .chat-layout {
-  display: flex;
   height: 100vh;
   background-color: #fff;
+}
+
+.chat-main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
 </style>

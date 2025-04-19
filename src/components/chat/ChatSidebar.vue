@@ -41,12 +41,22 @@
         <h3>历史对话</h3>
         <ul class="chat-history">
           <li v-for="(chat, index) in chatHistory" :key="index">
-            <button 
-              :class="['history-item', { active: chat.id === currentChatId }]"
-              @click="$emit('select-chat', chat.id)">
-              <span class="chat-title">{{ chat.title }}</span>
-              <span class="chat-time">{{ chat.time }}</span>
-            </button>
+            <div class="history-item-wrapper">
+              <button 
+                :class="['history-item', { active: chat.id === currentChatId }]"
+                @click="$emit('select-chat', chat.id)"
+              >
+                <span class="chat-title">{{ chat.title }}</span>
+                <span class="chat-time">{{ chat.time }}</span>
+              </button>
+              <button 
+                class="delete-btn" 
+                @click="$emit('delete-chat', chat.id)"
+                title="删除对话"
+              >
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
           </li>
         </ul>
       </div>
@@ -78,7 +88,7 @@ export default {
       default: ''
     }
   },
-  emits: ['new-chat', 'select-chat']
+  emits: ['new-chat', 'select-chat', 'delete-chat']
 }
 </script>
 
@@ -188,8 +198,15 @@ export default {
   margin: 0;
 }
 
-.history-item {
+.history-item-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
+}
+
+.history-item {
+  flex: 1;
   padding: 8px 12px;
   background: none;
   border: none;
@@ -223,6 +240,27 @@ export default {
 .chat-time {
   font-size: 12px;
   color: #999;
+}
+
+.delete-btn {
+  opacity: 0;
+  padding: 6px;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  margin-right: 4px;
+}
+
+.history-item-wrapper:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
 }
 
 .sidebar-footer {
